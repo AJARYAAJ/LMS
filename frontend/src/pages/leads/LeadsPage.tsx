@@ -2,9 +2,9 @@ import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  ArrowDownUp, Bookmark, CalendarClock, Download, Filter, KanbanSquare, List, Plus, Search, Tag as TagIcon, Target, Trash2, Upload, UserPlus, X,
+  ArrowDownUp, Bookmark, CalendarClock, Download, Filter, Inbox, Recycle, KanbanSquare, List, Plus, Search, Tag as TagIcon, Target, Trash2, Upload, UserPlus, X,
 } from 'lucide-react'
-import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
+import { useAction, useAppSelector, usePermissions, useToast } from '@/app/hooks'
 import {
   useBulkLeadsMutation, useChangeLeadStatusMutation, useCreateSavedViewMutation, useDeleteSavedViewMutation,
   useLeadBoardQuery, useLeadsQuery, useMetaQuery, useSavedViewsQuery,
@@ -25,6 +25,7 @@ export function LeadsPage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const run = useAction()
+  const toast = useToast()
   const { write, manager } = usePermissions()
   const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
   const { data: meta } = useMetaQuery()
@@ -72,7 +73,7 @@ export function LeadsPage() {
     const r = await run(bulk({ ids: selected, ...body }))
     if (r) {
       setSelected([])
-      run(Promise.resolve(r) as never)
+      toast(r.skipped ? 'info' : 'success', r.message)
     }
     return r
   }
@@ -93,6 +94,8 @@ export function LeadsPage() {
               onChange={(v) => update({ view: v === 'table' ? null : v })}
               options={[{ value: 'table', label: 'Table', icon: <List /> }, { value: 'board', label: 'Board', icon: <KanbanSquare /> }]}
             />
+            <Link to="/leads/queue"><Button variant="secondary" size="sm" icon={<Inbox className="size-4" />}>Queue</Button></Link>
+            {manager && <Link to="/leads/trash"><Button variant="ghost" size="sm" icon={<Recycle className="size-4" />} aria-label="Recycle bin" /></Link>}
             {write && <Button variant="secondary" size="sm" icon={<Upload className="size-4" />} onClick={() => setShowImport(true)}>Import</Button>}
             <Button variant="secondary" size="sm" icon={<Download className="size-4" />} onClick={exportCsv}>Export</Button>
             {write && <Button size="sm" icon={<Plus className="size-4" />} onClick={() => setShowForm(true)}>New lead</Button>}

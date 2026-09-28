@@ -18,10 +18,10 @@ export function NotificationBell() {
     <Menu
       width="w-[22rem]"
       trigger={({ toggle }) => (
-        <button onClick={toggle} className="relative inline-flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white" aria-label="Notifications">
+        <button onClick={toggle} className="relative inline-flex size-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-900/[0.05] hover:text-slate-900 dark:hover:bg-white/[0.07] dark:hover:text-white" aria-label="Notifications">
           <Bell className="size-[18px]" />
           {unread > 0 && (
-            <span className="absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-slate-900">
+            <span className="absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-500 px-1 text-[10px] font-bold text-white shadow-[0_0_10px_rgba(244,63,94,0.7)]">
               {unread > 9 ? '9+' : unread}
             </span>
           )}
@@ -50,7 +50,7 @@ export function NotificationBell() {
                     if (n.url) navigate(n.url)
                     close()
                   }}
-                  className={clsx('flex w-full gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800', !n.read_at && 'bg-brand-50/50 dark:bg-brand-500/5')}
+                  className={clsx('flex w-full gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-brand-50/70 dark:hover:bg-white/[0.05]', !n.read_at && 'bg-brand-50/60 dark:bg-brand-500/[0.07]')}
                 >
                   <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
                     <Icon className="size-4" />

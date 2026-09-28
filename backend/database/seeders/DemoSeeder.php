@@ -47,7 +47,7 @@ class DemoSeeder extends Seeder
             User::create(['name' => 'Val Viewer', 'email' => 'viewer@lms.test', 'password' => 'password', 'role' => User::VIEWER, 'job_title' => 'Analyst', 'avatar_color' => '#64748b']);
 
             $team = Team::create(['name' => 'Inbound Sales', 'description' => 'Handles website & referral leads', 'manager_id' => $manager->id, 'color' => '#6366f1']);
-            $team->members()->sync([$manager->id, ...$reps->pluck('id')]);
+            $team->members()->sync([$admin->id, $manager->id, ...$reps->pluck('id')]);
 
             AssignmentRule::create([
                 'name' => 'Inbound round robin', 'priority' => 10, 'strategy' => 'round_robin', 'team_id' => $team->id,
@@ -104,7 +104,7 @@ class DemoSeeder extends Seeder
                 $lead->forceFill(['created_at' => $createdAt, 'updated_at' => $createdAt])->saveQuietly();
                 $lead->activities()->update(['occurred_at' => $createdAt, 'created_at' => $createdAt]);
 
-                foreach (range(1, $faker->numberBetween(0, 4)) as $n) {
+                for ($n = 1, $touches = $faker->numberBetween(0, 4); $n <= $touches; $n++) {
                     $type = $faker->randomElement(['call', 'email', 'meeting', 'email', 'call']);
                     $when = $createdAt->copy()->addDays($n)->min(now());
                     Activity::create([
@@ -148,12 +148,16 @@ class DemoSeeder extends Seeder
                 $lead->statusHistory()->update(['created_at' => $createdAt]);
             }
 
+            // Guarantee a few closed-won deals this month so revenue widgets have data.
+            $won = $stages->firstWhere('is_won', true);
+            Deal::inRandomOrder()->limit(3)->update(['pipeline_stage_id' => $won->id]);
+
             Deal::whereNotNull('pipeline_stage_id')->get()->each(function (Deal $deal) use ($stages) {
                 $stage = $stages->firstWhere('id', $deal->pipeline_stage_id);
                 $deal->update([
                     'probability' => $stage->probability,
                     'status' => $stage->is_won ? 'won' : ($stage->is_lost ? 'lost' : 'open'),
-                    'closed_at' => ($stage->is_won || $stage->is_lost) ? now()->subDays(random_int(0, 25)) : null,
+                    'closed_at' => ($stage->is_won || $stage->is_lost) ? now()->subDays(random_int(0, min(20, now()->day - 1))) : null,
                     'expected_close_date' => now()->addDays(random_int(5, 60)),
                 ]);
             });

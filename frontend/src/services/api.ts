@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
 import type {
-  Account, Activity, ApiKey, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
+  Account, Activity, ApiKey, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
   ScoringRule, SearchResult, Tag, Task, Team, User, Webhook,
 } from '@/types'
@@ -34,7 +34,7 @@ const clean = (params?: Query) =>
 /** A settings resource with standard list/create/update/delete endpoints. */
 type SettingsTag =
   | 'LeadStatus' | 'LeadSource' | 'PipelineStage' | 'Tag' | 'CustomField' | 'Team' | 'AssignmentRule'
-  | 'ScoringRule' | 'AutomationRule' | 'Webhook' | 'Campaign' | 'User'
+  | 'ScoringRule' | 'AutomationRule' | 'Webhook' | 'Campaign' | 'User' | 'EmailTemplate' | 'Sequence' | 'WebForm'
 
 export interface DashboardData {
   kpis: {
@@ -57,6 +57,7 @@ export interface DashboardData {
   by_source: (Pick<LeadSource, 'id' | 'name' | 'color'> & { count: number })[]
   by_rating: { rating: string; count: number }[]
   trend: { date: string; created: number; converted: number }[]
+  heatmap: { date: string; count: number }[]
   upcoming_tasks: (Pick<Task, 'id' | 'title' | 'type' | 'priority' | 'due_at' | 'is_overdue' | 'taskable'>)[]
   hot_leads: Lead[]
 }
@@ -94,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -192,7 +193,7 @@ export const api = createApi({
     updateLead: b.mutation<Lead, { id: number } & Record<string, unknown>>({
       query: ({ id, ...body }) => ({ url: `leads/${id}`, method: 'PATCH', body }),
       transformResponse: (r: { data: Lead }) => r.data,
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Dashboard', 'Activity', 'Score', 'Task'],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Dashboard', 'Activity', 'Score', 'Task', 'Insights'],
     }),
     deleteLead: b.mutation<void, number>({
       query: (id) => ({ url: `leads/${id}`, method: 'DELETE' }),
@@ -201,17 +202,17 @@ export const api = createApi({
     changeLeadStatus: b.mutation<Lead, { id: number; lead_status_id: number; note?: string; lost_reason?: string }>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/status`, method: 'POST', body }),
       transformResponse: (r: { data: Lead }) => r.data,
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Dashboard', 'Activity', 'Task', 'Score', 'Notification'],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Dashboard', 'Activity', 'Task', 'Score', 'Notification', 'Insights'],
     }),
     assignLead: b.mutation<Lead, { id: number; owner_id?: number | null; auto?: boolean; reason?: string }>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/assign`, method: 'POST', body }),
       transformResponse: (r: { data: Lead }) => r.data,
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Activity'],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Activity', 'Insights'],
     }),
     convertLead: b.mutation<Lead, { id: number } & Record<string, unknown>>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/convert`, method: 'POST', body }),
       transformResponse: (r: { data: Lead }) => r.data,
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Dashboard', 'Activity', 'Deal', 'Contact', 'Account'],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Leads', 'Dashboard', 'Activity', 'Deal', 'Contact', 'Account', 'Insights'],
     }),
     leadScore: b.query<{ score: number; rating: string; events: { id: number; points: number; reason: string; scoring_rule_id: number | null; created_at: string }[] }, number>({
       query: (id) => `leads/${id}/score`,
@@ -220,14 +221,14 @@ export const api = createApi({
     }),
     adjustScore: b.mutation<void, { id: number; points: number; reason: string }>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/score`, method: 'POST', body }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Score', 'Leads'],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Score', 'Leads', 'Insights'],
     }),
     leadHistory: b.query<{ id: number; note: string | null; created_at: string; from_status: LeadStatus | null; to_status: LeadStatus | null; user: { name: string } | null }[], number>({
       query: (id) => `leads/${id}/history`,
       transformResponse: (r: { data: never }) => r.data,
       providesTags: ['Activity'],
     }),
-    bulkLeads: b.mutation<{ count: number; message: string }, Record<string, unknown>>({
+    bulkLeads: b.mutation<{ count: number; skipped?: number; message: string }, Record<string, unknown>>({
       query: (body) => ({ url: 'leads/bulk', method: 'POST', body }),
       invalidatesTags: ['Leads', 'Lead', 'Dashboard'],
     }),
@@ -241,18 +242,79 @@ export const api = createApi({
       transformResponse: (r: { data: Lead[] }) => r.data,
     }),
 
+    // --------------------------------------------- lead workspace (parity)
+    leadQueue: b.query<Lead[], void>({
+      query: () => 'leads/queue',
+      transformResponse: (r: { data: Lead[] }) => r.data,
+      providesTags: ['Queue'],
+    }),
+    claimLead: b.mutation<Lead, number>({
+      query: (id) => ({ url: `leads/${id}/claim`, method: 'POST' }),
+      invalidatesTags: (_r, _e, id) => [{ type: 'Lead', id }, 'Queue', 'Leads', 'Dashboard', 'Insights'],
+    }),
+    mergeLead: b.mutation<Lead, { id: number; duplicate_id: number }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/merge`, method: 'POST', body }),
+      invalidatesTags: ['Lead', 'Leads', 'Activity', 'Note', 'Task', 'Trash'],
+    }),
+    trash: b.query<Paginated<Lead & { deleted_at: string }>, number | void>({
+      query: (page) => ({ url: 'leads/trash', params: { page: page ?? 1 } }),
+      providesTags: ['Trash'],
+    }),
+    restoreLead: b.mutation<void, number>({
+      query: (id) => ({ url: `leads/trash/${id}/restore`, method: 'POST' }),
+      invalidatesTags: ['Trash', 'Leads', 'Dashboard'],
+    }),
+    updateQualification: b.mutation<{ progress: Insights['qualification']; score: number }, { id: number; answers: Record<string, boolean> }>({
+      query: ({ id, answers }) => ({ url: `leads/${id}/qualification`, method: 'PUT', body: { answers } }),
+      transformResponse: (r: { data: never }) => r.data,
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Lead', id }, 'Insights', 'Score', 'Activity', 'Leads'],
+    }),
+    insights: b.query<Insights, number>({
+      query: (id) => `leads/${id}/insights`,
+      transformResponse: (r: { data: Insights }) => r.data,
+      providesTags: ['Insights'],
+    }),
+    sendEmail: b.mutation<{ message: string }, { id: number; subject: string; body: string; email_template_id?: number | null }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/email`, method: 'POST', body }),
+      invalidatesTags: ['Activity', 'Insights', 'Lead', 'EmailTemplate'],
+    }),
+    previewEmail: b.mutation<{ subject: string; body: string }, { id: number; subject: string; body: string }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/email/preview`, method: 'POST', body }),
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    enrollments: b.query<Enrollment[], number>({
+      query: (id) => `leads/${id}/enrollments`,
+      transformResponse: (r: { data: Enrollment[] }) => r.data,
+      providesTags: ['Enrollment'],
+    }),
+    enroll: b.mutation<Enrollment, { id: number; sequence_id: number }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/enrollments`, method: 'POST', body }),
+      invalidatesTags: ['Enrollment', 'Task', 'Activity', 'Lead', 'Insights', 'Sequence'],
+    }),
+    stopEnrollment: b.mutation<void, number>({
+      query: (id) => ({ url: `enrollments/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Enrollment', 'Task', 'Activity', 'Sequence'],
+    }),
+    publicForm: b.query<Pick<WebForm, 'name' | 'slug' | 'title' | 'description' | 'submit_label' | 'success_message' | 'redirect_url' | 'accent_color'> & { fields: WebFormField[]; organization: string }, string>({
+      query: (slug) => `forms/${slug}`,
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    submitPublicForm: b.mutation<{ message: string; redirect_url: string | null }, { slug: string; body: Record<string, string> }>({
+      query: ({ slug, body }) => ({ url: `forms/${slug}`, method: 'POST', body }),
+    }),
+
     // ------------------------------------------------ timeline & notes
     activities: b.query<Paginated<Activity>, { type: SubjectType; id: number; filter?: string; per_page?: number }>({
       query: ({ type, id, filter, per_page }) => ({ url: `${type}/${id}/activities`, params: clean({ type: filter, per_page }) }),
       providesTags: ['Activity'],
     }),
-    logActivity: b.mutation<Activity, { type: SubjectType; id: number } & Record<string, unknown>>({
-      query: ({ type, id, ...body }) => ({ url: `${type}/${id}/activities`, method: 'POST', body }),
-      invalidatesTags: ['Activity', 'Lead', 'Dashboard'],
+    logActivity: b.mutation<Activity, { subject: SubjectType; id: number } & Record<string, unknown>>({
+      query: ({ subject, id, ...body }) => ({ url: `${subject}/${id}/activities`, method: 'POST', body }),
+      invalidatesTags: ['Activity', 'Lead', 'Dashboard', 'Insights'],
     }),
     deleteActivity: b.mutation<void, number>({
       query: (id) => ({ url: `activities/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Activity'],
+      invalidatesTags: ['Activity', 'Insights'],
     }),
     notes: b.query<Note[], { type: SubjectType; id: number }>({
       query: ({ type, id }) => `${type}/${id}/notes`,
@@ -261,7 +323,7 @@ export const api = createApi({
     }),
     addNote: b.mutation<Note, { type: SubjectType; id: number; body: string; is_pinned?: boolean }>({
       query: ({ type, id, ...body }) => ({ url: `${type}/${id}/notes`, method: 'POST', body }),
-      invalidatesTags: ['Note', 'Activity', 'Lead'],
+      invalidatesTags: ['Note', 'Activity', 'Lead', 'Insights'],
     }),
     updateNote: b.mutation<Note, { id: number; body?: string; is_pinned?: boolean }>({
       query: ({ id, ...body }) => ({ url: `notes/${id}`, method: 'PATCH', body }),
@@ -284,7 +346,7 @@ export const api = createApi({
     }),
     createTask: b.mutation<Task, Record<string, unknown>>({
       query: (body) => ({ url: 'tasks', method: 'POST', body }),
-      invalidatesTags: ['Task', 'Dashboard', 'Activity', 'Lead'],
+      invalidatesTags: ['Task', 'Dashboard', 'Activity', 'Lead', 'Insights'],
     }),
     updateTask: b.mutation<Task, { id: number } & Record<string, unknown>>({
       query: ({ id, ...body }) => ({ url: `tasks/${id}`, method: 'PATCH', body }),
@@ -292,11 +354,11 @@ export const api = createApi({
     }),
     toggleTask: b.mutation<Task, number>({
       query: (id) => ({ url: `tasks/${id}/toggle`, method: 'POST' }),
-      invalidatesTags: ['Task', 'Dashboard', 'Activity', 'Lead'],
+      invalidatesTags: ['Task', 'Dashboard', 'Activity', 'Lead', 'Insights'],
     }),
     deleteTask: b.mutation<void, number>({
       query: (id) => ({ url: `tasks/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Task', 'Dashboard', 'Lead'],
+      invalidatesTags: ['Task', 'Dashboard', 'Lead', 'Insights'],
     }),
 
     // --------------------------------------------------------------- CRM
@@ -399,6 +461,9 @@ export const {
   useOrganizationQuery, useUpdateOrganizationMutation, useSettingsListQuery, useSaveSettingMutation, useDeleteSettingMutation,
   useReorderStatusesMutation, useRecalculateScoresMutation, useAutomationExecutionsQuery, useTestWebhookMutation,
   useApiKeysQuery, useCreateApiKeyMutation, useRevokeApiKeyMutation,
+  useLeadQueueQuery, useClaimLeadMutation, useMergeLeadMutation, useTrashQuery, useRestoreLeadMutation,
+  useUpdateQualificationMutation, useInsightsQuery, useSendEmailMutation, usePreviewEmailMutation,
+  useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
 
 // Typed helpers for settings resources.
@@ -416,6 +481,9 @@ export const resources = {
   scoringRules: { resource: 'scoring-rules', tag: 'ScoringRule' } as SettingsResource<ScoringRule>,
   automationRules: { resource: 'automation-rules', tag: 'AutomationRule' } as SettingsResource<AutomationRule>,
   webhooks: { resource: 'webhooks', tag: 'Webhook' } as SettingsResource<Webhook>,
+  emailTemplates: { resource: 'email-templates', tag: 'EmailTemplate' } as SettingsResource<EmailTemplate>,
+  sequences: { resource: 'sequences', tag: 'Sequence' } as SettingsResource<Sequence>,
+  webForms: { resource: 'web-forms', tag: 'WebForm' } as SettingsResource<WebForm>,
 }
 
 /** Typed wrapper around the generic settings list query. */

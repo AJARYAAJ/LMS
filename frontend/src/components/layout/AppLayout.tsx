@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import clsx from 'clsx'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { userLoaded } from '@/features/auth/authSlice'
 import { useMeQuery } from '@/services/api'
-import { Spinner } from '@/components/ui'
+import { PageLoader, Spinner } from '@/components/ui'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
@@ -33,14 +33,27 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen">
+      <Aurora />
       <Sidebar />
-      <div className={clsx('transition-all duration-300', collapsed ? 'lg:pl-[72px]' : 'lg:pl-64')}>
+      <div className={clsx('pt-3 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', collapsed ? 'lg:pl-[88px]' : 'lg:pl-[260px]')}>
         <Topbar />
-        <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet />
+        <main key={location.pathname.split('/')[1]} className="mx-auto max-w-[1600px] animate-slide-up px-4 py-7 sm:px-6 lg:px-8">
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       <CommandPalette />
+    </div>
+  )
+}
+
+export function Aurora() {
+  return (
+    <div className="aurora" aria-hidden>
+      <span />
+      <span />
+      <span />
     </div>
   )
 }

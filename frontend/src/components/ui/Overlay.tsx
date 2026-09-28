@@ -33,16 +33,16 @@ export function Modal({ open, onClose, title, description, children, footer, siz
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <div className="absolute inset-0 animate-fade-in bg-slate-950/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 animate-fade-in bg-ink-950/40 backdrop-blur-md" onClick={onClose} />
       <div
         role="dialog"
         aria-modal="true"
-        className={clsx('relative flex max-h-[92vh] w-full animate-slide-up flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl dark:bg-slate-900 dark:ring-1 dark:ring-slate-800', widths[size])}
+        className={clsx('glass-solid relative flex max-h-[92vh] w-full animate-slide-up flex-col overflow-hidden rounded-t-3xl shadow-[0_40px_120px_-20px_rgba(76,29,149,0.45)] sm:rounded-3xl', widths[size])}
       >
         {(title || description) && (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <div className="flex items-start justify-between gap-4 border-b border-slate-200/60 px-6 py-4 dark:border-white/[0.06]">
             <div>
-              {title && <h2 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h2>}
+              {title && <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>}
               {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
             </div>
             <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800" aria-label="Close">
@@ -51,7 +51,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
           </div>
         )}
         <div className="overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-6 py-3 dark:border-slate-800 dark:bg-slate-900/60">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t border-slate-200/60 bg-slate-50/50 px-6 py-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -71,16 +71,16 @@ export function Drawer({ open, onClose, title, children, footer, width = 'max-w-
 
   return createPortal(
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 animate-fade-in bg-slate-950/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className={clsx('absolute inset-y-0 right-0 flex w-full animate-slide-in-right flex-col bg-white shadow-2xl dark:bg-slate-900 dark:ring-1 dark:ring-slate-800', width)}>
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h2>
+      <div className="absolute inset-0 animate-fade-in bg-ink-950/40 backdrop-blur-md" onClick={onClose} />
+      <div className={clsx('glass-solid absolute inset-y-2 right-2 flex w-[calc(100%-1rem)] animate-slide-in-right flex-col overflow-hidden rounded-3xl shadow-2xl', width)}>
+        <div className="flex items-center justify-between border-b border-slate-200/60 px-6 py-4 dark:border-white/[0.06]">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2>
           <button onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800" aria-label="Close">
             <X className="size-5" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-3 dark:border-slate-800">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t border-slate-200/60 px-6 py-3.5 dark:border-white/[0.06]">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -152,7 +152,7 @@ export function Menu({ trigger, children, align = 'right', width = 'w-56' }: {
       {open && (
         <div
           className={clsx(
-            'absolute z-40 mt-2 animate-slide-up overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900',
+            'glass-solid absolute z-40 mt-2 animate-slide-up overflow-hidden rounded-2xl p-1.5 shadow-[0_24px_64px_-16px_rgba(76,29,149,0.35)]',
             align === 'right' ? 'right-0' : 'left-0',
             width,
           )}
@@ -176,9 +176,9 @@ export function MenuItem({ icon, children, onClick, danger, active }: {
       type="button"
       onClick={onClick}
       className={clsx(
-        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition',
-        danger ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
-        active && 'bg-slate-100 dark:bg-slate-800',
+        'flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition',
+        danger ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10' : 'text-slate-700 hover:bg-brand-50 dark:text-slate-300 dark:hover:bg-white/[0.06]',
+        active && 'bg-brand-50 text-brand-700 dark:bg-white/[0.08] dark:text-white',
       )}
     >
       {icon && <span className="text-slate-400 [&>svg]:size-4">{icon}</span>}

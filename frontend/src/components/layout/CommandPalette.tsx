@@ -93,10 +93,10 @@ export function CommandPalette() {
 
   return createPortal(
     <div className="fixed inset-0 z-[55] flex items-start justify-center p-4 pt-[12vh]">
-      <div className="absolute inset-0 animate-fade-in bg-slate-950/50 backdrop-blur-sm" onClick={close} />
-      <div className="relative w-full max-w-xl animate-slide-up overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex items-center gap-3 border-b border-slate-100 px-4 dark:border-slate-800">
-          <Search className="size-5 text-slate-400" />
+      <div className="absolute inset-0 animate-fade-in bg-ink-950/40 backdrop-blur-md" onClick={close} />
+      <div className="glass-solid gradient-border relative w-full max-w-xl animate-slide-up overflow-hidden rounded-3xl shadow-[0_40px_120px_-20px_rgba(124,58,237,0.55)]">
+        <div className="flex items-center gap-3 border-b border-slate-200/60 px-5 dark:border-white/[0.06]">
+          <Search className="size-5 text-brand-500" />
           <input
             autoFocus
             value={query}
@@ -126,7 +126,7 @@ export function CommandPalette() {
               <button
                 onMouseEnter={() => setActive(i)}
                 onClick={c.run}
-                className={clsx('flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm', i === active ? 'bg-brand-50 text-brand-900 dark:bg-brand-500/10 dark:text-white' : 'text-slate-700 dark:text-slate-300')}
+                className={clsx('flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition', i === active ? 'bg-[linear-gradient(135deg,rgba(139,92,246,0.14),rgba(217,70,239,0.1))] text-brand-900 dark:text-white' : 'text-slate-700 dark:text-slate-300')}
               >
                 <c.icon className={clsx('size-4 shrink-0', i === active ? 'text-brand-600' : 'text-slate-400')} />
                 <span className="min-w-0 flex-1 truncate font-medium">{c.label}</span>
@@ -137,7 +137,7 @@ export function CommandPalette() {
             </li>
           ))}
         </ul>
-        <div className="flex items-center gap-4 border-t border-slate-100 px-4 py-2 text-[11px] text-slate-400 dark:border-slate-800">
+        <div className="flex items-center gap-4 border-t border-slate-200/60 px-5 py-2.5 text-[11px] text-slate-400 dark:border-white/[0.06]">
           <span>↑↓ navigate</span>
           <span>↵ open</span>
           <span className="ml-auto">⌘K / Ctrl+K anywhere</span>

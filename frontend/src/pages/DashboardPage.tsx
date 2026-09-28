@@ -49,7 +49,7 @@ export function DashboardPage() {
       />
 
       {/* My day */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
           { label: 'My open leads', value: my.open_leads, icon: Target, to: '/leads?owner_id=me', tone: 'text-brand-600 bg-brand-50 dark:bg-brand-500/10' },
           { label: 'Follow-ups today', value: my.follow_ups_today, icon: CalendarCheck, to: '/leads?owner_id=me&follow_up=today', tone: 'text-sky-600 bg-sky-50 dark:bg-sky-500/10' },
@@ -61,7 +61,7 @@ export function DashboardPage() {
             <span className={clsx('flex size-10 items-center justify-center rounded-xl', item.tone)}><item.icon className="size-5" /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-xl font-semibold text-slate-900 dark:text-white">{item.value}</span>
-              <span className="block truncate text-xs text-slate-500">{item.label}</span>
+              <span className="block text-xs leading-tight text-slate-500">{item.label}</span>
             </span>
             <ArrowRight className="size-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-brand-500" />
           </Link>
@@ -225,9 +225,33 @@ export function DashboardPage() {
         </Card>
       </div>
 
+      <ActivityHeatmap days={data.heatmap} />
+
       <p className="flex items-center justify-center gap-2 pt-2 text-xs text-slate-400">
         <Avatar name={user?.organization?.name} size="xs" /> {user?.organization?.name} · data refreshes every minute
       </p>
     </div>
+  )
+}
+
+function ActivityHeatmap({ days }: { days: { date: string; count: number }[] }) {
+  const max = Math.max(1, ...days.map((d) => d.count))
+  const weeks: { date: string; count: number }[][] = []
+  days.forEach((d, i) => { if (i % 7 === 0) weeks.push([]); weeks[weeks.length - 1].push(d) })
+  const total = days.reduce((s, d) => s + d.count, 0)
+  const level = (c: number) => (c === 0 ? 0 : Math.ceil((c / max) * 4))
+  const shades = ['bg-slate-200/70 dark:bg-white/[0.05]', 'bg-violet-200 dark:bg-violet-900', 'bg-violet-400 dark:bg-violet-700', 'bg-fuchsia-500 dark:bg-fuchsia-500', 'bg-gradient-to-br from-fuchsia-500 to-cyan-400 shadow-[0_0_8px_rgba(217,70,239,0.7)]']
+
+  return (
+    <Card title="Engagement heatmap" subtitle={`${total} calls, emails and meetings in the last 12 weeks`}>
+      <div className="flex gap-1 overflow-x-auto pb-1">
+        {weeks.map((w, i) => (
+          <div key={i} className="flex flex-col gap-1">
+            {w.map((d) => <div key={d.date} title={`${d.date}: ${d.count}`} className={clsx('size-3.5 rounded-[4px] transition hover:scale-125', shades[level(d.count)])} />)}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-end gap-1 text-[11px] text-slate-400">Less {shades.map((s, i) => <span key={i} className={clsx('size-3 rounded-[3px]', s)} />)} More</div>
+    </Card>
   )
 }

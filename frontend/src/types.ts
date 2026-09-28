@@ -63,6 +63,7 @@ export interface LeadStatus {
   is_active: boolean
   is_default: boolean
   is_terminal: boolean
+  required_fields: string[] | null
   leads_count?: number
 }
 
@@ -395,6 +396,9 @@ export interface Meta {
   users: UserLite[]
   stages: PipelineStage[]
   custom_fields: CustomField[]
+  email_templates: Pick<EmailTemplate, 'id' | 'name' | 'category' | 'subject' | 'body'>[]
+  sequences: Pick<Sequence, 'id' | 'name' | 'description' | 'steps'>[]
+  qualification_criteria: { key: string; label: string }[]
   enums: {
     priorities: Priority[]
     ratings: Rating[]
@@ -405,6 +409,9 @@ export interface Meta {
     automation_triggers: string[]
     automation_actions: string[]
     webhook_events: string[]
+    merge_fields: string[]
+    form_field_keys: string[]
+    task_types: string[]
   }
 }
 
@@ -416,4 +423,75 @@ export interface SearchResult {
   badge?: string | null
   color?: string | null
   url: string
+}
+
+export interface EmailTemplate {
+  id: number
+  name: string
+  category: string
+  subject: string
+  body: string
+  usage_count: number
+  creator?: UserLite | null
+  created_at: string
+}
+
+export interface SequenceStep {
+  day_offset: number
+  type: string
+  title: string
+  email_template_id?: number | null
+}
+
+export interface Sequence {
+  id: number
+  name: string
+  description: string | null
+  steps: SequenceStep[]
+  is_active: boolean
+  active_enrollments_count?: number
+  completed_enrollments_count?: number
+}
+
+export interface Enrollment {
+  id: number
+  status: 'active' | 'completed' | 'stopped'
+  sequence: Pick<Sequence, 'id' | 'name' | 'steps'>
+  tasks_count: number
+  completed_tasks_count: number
+  created_at: string
+  completed_at: string | null
+}
+
+export interface WebFormField {
+  key: string
+  label: string
+  type: 'text' | 'email' | 'tel' | 'number' | 'textarea'
+  required?: boolean
+}
+
+export interface WebForm {
+  id: number
+  name: string
+  slug: string
+  title: string | null
+  description: string | null
+  fields: WebFormField[]
+  lead_source_id: number | null
+  campaign_id: number | null
+  tag_ids: number[] | null
+  submit_label: string
+  success_message: string
+  redirect_url: string | null
+  accent_color: string
+  is_active: boolean
+  submissions_count: number
+  source?: { id: number; name: string; color: string } | null
+}
+
+export interface Insights {
+  summary: string
+  next_action: { title: string; type: string; reason: string }
+  signals: { tone: 'positive' | 'warning' | 'negative'; text: string }[]
+  qualification: { percent: number; missing: string[] }
 }

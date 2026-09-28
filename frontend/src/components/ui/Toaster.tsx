@@ -18,7 +18,7 @@ function ToastItem({ toast }: { toast: Toast }) {
   }, [dispatch, toast])
 
   return (
-    <div className={clsx('pointer-events-auto flex w-80 animate-slide-up items-start gap-3 rounded-xl border bg-white p-3.5 shadow-lg shadow-slate-900/10 dark:bg-slate-900',
+    <div className={clsx('glass-solid pointer-events-auto flex w-80 animate-slide-up items-start gap-3 rounded-2xl p-3.5 shadow-[0_20px_50px_-12px_rgba(76,29,149,0.4)]',
       toast.kind === 'error' ? 'border-rose-200 dark:border-rose-500/30' : 'border-slate-200 dark:border-slate-700')}>
       {icons[toast.kind]}
       <div className="min-w-0 flex-1">

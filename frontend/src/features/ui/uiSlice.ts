@@ -41,7 +41,7 @@ export function applyTheme(theme: Theme) {
 
 const initialState: UiState = {
   theme: read<Theme>('lms.theme', 'system'),
-  sidebarCollapsed: read('lms.sidebar', 'open') === 'collapsed',
+  sidebarCollapsed: read<string>('lms.sidebar', 'open') === 'collapsed',
   mobileNavOpen: false,
   commandOpen: false,
   toasts: [],

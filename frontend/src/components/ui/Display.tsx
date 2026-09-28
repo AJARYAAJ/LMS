@@ -15,9 +15,9 @@ export function Card({ children, className, title, action, padded = true, subtit
   return (
     <section className={clsx('card', className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
+        <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-1">
           <div className="min-w-0">
-            {title && <h3 className="truncate text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>}
+            {title && <h3 className="truncate text-[15px] font-semibold text-slate-900 dark:text-white">{title}</h3>}
             {subtitle && <p className="truncate text-xs text-slate-500">{subtitle}</p>}
           </div>
           {action}
@@ -73,7 +73,7 @@ export function PageLoader() {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={clsx('animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800', className)} />
+  return <div className={clsx('shimmer rounded-2xl bg-slate-200/50 dark:bg-white/[0.04]', className)} />
 }
 
 export function EmptyState({ icon, title, description, action, className }: {
@@ -100,13 +100,14 @@ export function PageHeader({ title, description, actions, icon }: { title: React
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex items-center gap-3">
         {icon && (
-          <div className="hidden size-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-white shadow-lg shadow-brand-500/25 sm:flex [&>svg]:size-5">
-            {icon}
+          <div className="relative hidden size-12 items-center justify-center sm:flex">
+            <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] opacity-80 blur-[6px]" />
+            <span className="relative flex size-12 items-center justify-center rounded-2xl bg-white/90 text-brand-600 shadow-inner dark:bg-ink-900/90 dark:text-brand-300 [&>svg]:size-5">{icon}</span>
           </div>
         )}
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl dark:text-white">{title}</h1>
-          {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px] dark:text-white">{title}</h1>
+          {description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>}
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -123,17 +124,17 @@ export function StatCard({ label, value, icon, delta, hint, accent = '#6366f1' }
   accent?: string
 }) {
   return (
-    <div className="card group relative overflow-hidden p-5">
-      <div className="absolute -top-10 -right-10 size-28 rounded-full opacity-[0.07] transition-transform duration-500 group-hover:scale-125" style={{ backgroundColor: accent }} />
+    <div className="card group overflow-hidden p-5">
+      <div className="absolute -top-12 -right-12 -z-10 size-36 rounded-full opacity-25 blur-2xl transition-all duration-700 group-hover:scale-125 group-hover:opacity-40" style={{ backgroundColor: accent }} />
       <div className="flex items-start justify-between">
-        <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">{label}</p>
+        <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400">{label}</p>
         {icon && (
-          <span className="flex size-8 items-center justify-center rounded-lg [&>svg]:size-4" style={{ backgroundColor: `${accent}1a`, color: accent }}>
+          <span className="flex size-9 items-center justify-center rounded-xl shadow-sm [&>svg]:size-4" style={{ background: `linear-gradient(135deg, ${accent}33, ${accent}14)`, color: accent }}>
             {icon}
           </span>
         )}
       </div>
-      <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{value}</p>
+      <p className="font-display mt-3 text-[28px] leading-none font-bold tracking-tight text-slate-900 dark:text-white">{value}</p>
       <div className="mt-1 flex items-center gap-2 text-xs">
         {delta !== undefined && delta !== null && (
           <span className={clsx('inline-flex items-center gap-0.5 font-medium', delta >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
@@ -154,17 +155,17 @@ export function Tabs<T extends string>({ tabs, value, onChange, className }: {
   className?: string
 }) {
   return (
-    <div className={clsx('flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-slate-800', className)}>
+    <div className={clsx('flex gap-1 overflow-x-auto rounded-2xl bg-slate-900/[0.04] p-1 dark:bg-white/[0.04]', className)}>
       {tabs.map((t) => (
         <button
           key={t.value}
           type="button"
           onClick={() => onChange(t.value)}
           className={clsx(
-            '-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition [&>svg]:size-4',
+            'flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 [&>svg]:size-4',
             value === t.value
-              ? 'border-brand-600 text-brand-700 dark:border-brand-400 dark:text-brand-300'
-              : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200',
+              ? 'bg-white text-slate-900 shadow-[0_4px_16px_-6px_rgba(76,29,149,0.35)] dark:bg-white/10 dark:text-white'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200',
           )}
         >
           {t.icon}
@@ -186,15 +187,15 @@ export function Segmented<T extends string>({ options, value, onChange }: {
   onChange: (value: T) => void
 }) {
   return (
-    <div className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+    <div className="inline-flex rounded-xl bg-slate-900/[0.05] p-1 dark:bg-white/[0.05]">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={clsx(
-            'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition [&>svg]:size-3.5',
-            value === o.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200',
+            'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 [&>svg]:size-3.5',
+            value === o.value ? 'bg-white text-slate-900 shadow-[0_4px_12px_-4px_rgba(76,29,149,0.35)] dark:bg-white/10 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200',
           )}
         >
           {o.icon}
@@ -208,7 +209,7 @@ export function Segmented<T extends string>({ options, value, onChange }: {
 export function Pagination({ meta, onPage }: { meta: Pick<Paginated<unknown>, 'current_page' | 'last_page' | 'total' | 'from' | 'to'>; onPage: (page: number) => void }) {
   if (meta.total === 0) return null
   return (
-    <div className="flex items-center justify-between gap-4 border-t border-slate-100 px-4 py-3 text-sm dark:border-slate-800">
+    <div className="flex items-center justify-between gap-4 border-t border-slate-200/60 px-4 py-3 text-sm dark:border-white/[0.06]">
       <p className="text-slate-500">
         <span className="font-medium text-slate-700 dark:text-slate-300">{meta.from}–{meta.to}</span> of{' '}
         <span className="font-medium text-slate-700 dark:text-slate-300">{meta.total}</span>
@@ -244,18 +245,19 @@ export function ScoreRing({ score, size = 44 }: { score: number; size?: number }
   const color = score > 80 ? '#ef4444' : score > 60 ? '#f97316' : score > 30 ? '#f59e0b' : '#94a3b8'
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="4" className="stroke-slate-200 dark:stroke-slate-800" />
+      <span className="absolute inset-1 rounded-full opacity-40 blur-md" style={{ backgroundColor: color }} />
+      <svg width={size} height={size} className="relative -rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="4" className="stroke-slate-200/80 dark:stroke-white/10" />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth="4" stroke={color} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c - (c * Math.min(score, 100)) / 100} className="transition-all duration-700" />
       </svg>
-      <span className="absolute text-xs font-semibold text-slate-800 dark:text-slate-100">{score}</span>
+      <span className="font-display absolute text-xs font-bold text-slate-800 dark:text-slate-100">{score}</span>
     </div>
   )
 }
 
 export function DescriptionList({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
-    <dl className="divide-y divide-slate-100 dark:divide-slate-800">
+    <dl className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
       {items.map((i) => (
         <div key={i.label} className="flex items-start justify-between gap-4 py-2.5 text-sm">
           <dt className="shrink-0 text-slate-500">{i.label}</dt>
