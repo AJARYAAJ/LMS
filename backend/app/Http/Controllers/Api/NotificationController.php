@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class NotificationController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'data' => $user->notifications()->limit(30)->get()->map(fn ($n) => [
+                'id' => $n->id,
+                ...$n->data,
+                'read_at' => $n->read_at,
+                'created_at' => $n->created_at,
+            ]),
+            'unread' => $user->unreadNotifications()->count(),
+        ]);
+    }
+
+    public function read(Request $request, string $id): JsonResponse
+    {
+        $request->user()->notifications()->whereKey($id)->firstOrFail()->markAsRead();
+
+        return $this->index($request);
+    }
+
+    public function readAll(Request $request): JsonResponse
+    {
+        $request->user()->unreadNotifications->markAsRead();
+
+        return $this->index($request);
+    }
+}
