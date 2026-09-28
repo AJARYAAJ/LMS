@@ -47,6 +47,7 @@ class ContactController extends ResourceController
             'job_title' => ['nullable', 'string', 'max:120'],
             'account_id' => ['nullable', Rules::exists('accounts')],
             'owner_id' => ['nullable', Rules::exists('users')],
+            'custom_fields' => ['nullable', 'array'],
         ];
     }
 }

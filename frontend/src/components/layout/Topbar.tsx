@@ -31,7 +31,7 @@ export function Topbar() {
   }
 
   return (
-    <header className="glass sticky top-3 z-30 mx-3 flex h-[60px] items-center gap-3 rounded-[22px] px-3 sm:mx-4 sm:px-4 lg:mx-6">
+    <header className="glass glass-blur sticky top-3 z-30 mx-3 flex h-[60px] items-center gap-3 rounded-[22px] px-3 sm:mx-4 sm:px-4 lg:mx-6">
       <button onClick={() => dispatch(setMobileNav(true))} className="rounded-lg p-2 text-slate-500 lg:hidden" aria-label="Open menu">
         <MenuIcon className="size-5" />
       </button>

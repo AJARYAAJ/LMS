@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'domain', 'industry', 'company_size', 'phone', 'website', 'city', 'country', 'annual_revenue', 'owner_id', 'description'])]
+#[Fillable(['name', 'domain', 'industry', 'company_size', 'phone', 'website', 'city', 'country', 'annual_revenue', 'owner_id', 'description', 'custom_fields'])]
 class Account extends Model
 {
     use BelongsToOrganization, SoftDeletes;
@@ -18,6 +18,7 @@ class Account extends Model
     protected function casts(): array
     {
         return [
+            'custom_fields' => 'array',
             'annual_revenue' => 'decimal:2',
         ];
     }

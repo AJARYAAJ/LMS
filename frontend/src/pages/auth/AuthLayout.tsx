@@ -16,8 +16,8 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
         <div className="card w-full max-w-md animate-slide-up p-8 sm:p-10">
           <div className="mb-8 flex items-center gap-3">
             <div className="relative flex size-11 items-center justify-center">
-              <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] blur-[5px]" />
-              <span className="relative flex size-11 items-center justify-center rounded-2xl bg-ink-900 text-white"><Sparkles className="size-5" /></span>
+              <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] p-0.5" />
+              <span className="relative m-0.5 flex size-10 items-center justify-center rounded-[14px] bg-ink-900 text-white"><Sparkles className="size-5" /></span>
             </div>
             <span className="font-display text-xl font-bold tracking-tight text-slate-900 dark:text-white">LeadFlow</span>
           </div>
@@ -28,9 +28,9 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
       </div>
 
       <div className="relative hidden overflow-hidden rounded-[32px] bg-ink-950 lg:block">
-        <div className="absolute -top-1/4 -left-1/4 size-[70%] animate-[aurora-a_24s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle,#7c3aed_0%,transparent_65%)] opacity-70 blur-3xl" />
-        <div className="absolute -right-1/4 -bottom-1/4 size-[70%] animate-[aurora-b_30s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle,#db2777_0%,transparent_65%)] opacity-60 blur-3xl" />
-        <div className="absolute top-1/3 left-1/3 size-[45%] animate-[aurora-a_36s_ease-in-out_infinite_reverse] rounded-full bg-[radial-gradient(circle,#0891b2_0%,transparent_65%)] opacity-50 blur-3xl" />
+        <div className="absolute -top-1/4 -left-1/4 size-[70%] animate-[aurora-a_24s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle,#7c3aed_0%,transparent_65%)] opacity-70" />
+        <div className="absolute -right-1/4 -bottom-1/4 size-[70%] animate-[aurora-b_30s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle,#db2777_0%,transparent_65%)] opacity-60" />
+        <div className="absolute top-1/3 left-1/3 size-[45%] animate-[aurora-a_36s_ease-in-out_infinite_reverse] rounded-full bg-[radial-gradient(circle,#0891b2_0%,transparent_65%)] opacity-50" />
         <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.15)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.15)_1px,transparent_1px)] [background-size:44px_44px]" />
         <div className="relative flex h-full flex-col justify-between p-12 text-white">
           <div>

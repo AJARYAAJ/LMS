@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import {
   ArrowLeft, BadgeCheck, Building2, CalendarClock, Check, CheckCircle2, ChevronRight, Circle, Copy, Globe, GitMerge, Lightbulb, Mail,
-  MapPin, MoreHorizontal, Pencil, Phone, Pin, PinOff, Plus, Repeat, Send, Sparkles, Trash2, TrendingDown, TrendingUp, TriangleAlert,
+  MapPin, MessageCircle, MoreHorizontal, Pencil, Phone, Pin, PinOff, Plus, Repeat, Send, Sparkles, Trash2, TrendingDown, TrendingUp, TriangleAlert,
   UserPlus, Workflow, Zap,
 } from 'lucide-react'
 import { useAction, useAppSelector, useCurrentUser, usePermissions, useToast } from '@/app/hooks'
@@ -24,7 +24,7 @@ import { ago, date, dateTime, friendlyDue, humanize, money } from '@/lib/format'
 import { RATING_META } from '@/lib/constants'
 import type { LeadStatus } from '@/types'
 import { LeadFormModal } from './LeadFormModal'
-import { AssignModal, ConvertModal, EmailComposerModal, EnrollModal, LostModal, MergeModal } from './LeadModals'
+import { AiBriefPanel, AssignModal, ConvertModal, EmailComposerModal, EnrollModal, LostModal, MergeModal, MessageModal } from './LeadModals'
 
 type Tab = 'timeline' | 'notes' | 'tasks' | 'sequences' | 'history'
 
@@ -44,7 +44,7 @@ export function LeadDetailPage() {
   const [deleteLead, deleteState] = useDeleteLeadMutation()
 
   const [tab, setTab] = useState<Tab>('timeline')
-  const [modal, setModal] = useState<null | 'edit' | 'activity' | 'email' | 'task' | 'convert' | 'assign' | 'merge' | 'enroll' | 'delete' | 'lost'>(null)
+  const [modal, setModal] = useState<null | 'message' | 'edit' | 'activity' | 'email' | 'task' | 'convert' | 'assign' | 'merge' | 'enroll' | 'delete' | 'lost'>(null)
   const [activityType, setActivityType] = useState('call')
   const [lostStatus, setLostStatus] = useState<LeadStatus | null>(null)
 
@@ -137,6 +137,7 @@ export function LeadDetailPage() {
             <Button size="sm" variant="secondary" icon={<Phone className="size-4" />} onClick={() => { setActivityType('call'); setModal('activity') }}>Log call</Button>
             <Button size="sm" variant="secondary" icon={<Send className="size-4" />} onClick={() => setModal('email')} disabled={!lead.email}>Email</Button>
             <Button size="sm" variant="secondary" icon={<CalendarClock className="size-4" />} onClick={() => setModal('task')}>Task</Button>
+            <Button size="sm" variant="secondary" icon={<MessageCircle className="size-4" />} onClick={() => setModal('message')} disabled={!lead.phone}>SMS / WhatsApp</Button>
             <Button size="sm" variant="secondary" icon={<Repeat className="size-4" />} onClick={() => setModal('enroll')}>Sequence</Button>
             <div className="ml-auto flex items-center gap-2">
               {!converted && <Button size="sm" icon={<Sparkles className="size-4" />} onClick={() => setModal('convert')}>Convert</Button>}
@@ -195,7 +196,7 @@ export function LeadDetailPage() {
           {/* ---------- Insights ---------- */}
           {insights && (
             <section className="card gradient-border overflow-hidden p-6">
-              <div className="absolute -top-20 -right-20 -z-10 size-64 rounded-full bg-fuchsia-400/20 blur-3xl" />
+              <div className="absolute -top-24 -right-24 -z-10 size-72 rounded-full bg-[radial-gradient(circle,rgba(217,70,239,0.22)_0%,transparent_65%)]" />
               <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.12em] text-brand-600 uppercase dark:text-brand-300"><Lightbulb className="size-4" /> Smart insights</div>
               <p className="mt-3 text-[15px] leading-relaxed text-slate-700 dark:text-slate-300">{insights.summary}</p>
               <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-center">
@@ -211,6 +212,7 @@ export function LeadDetailPage() {
                   </div>
                 </div>
               </div>
+              <AiBriefPanel leadId={lead.id} />
               {!!insights.signals.length && (
                 <ul className="mt-4 flex flex-wrap gap-2">
                   {insights.signals.map((s, i) => (
@@ -290,6 +292,7 @@ export function LeadDetailPage() {
       <LeadFormModal open={modal === 'edit'} onClose={() => setModal(null)} lead={lead} />
       <ActivityModal open={modal === 'activity'} onClose={() => setModal(null)} subjectType="leads" subjectId={lead.id} initialType={activityType} />
       <EmailComposerModal open={modal === 'email'} onClose={() => setModal(null)} lead={lead} />
+      <MessageModal open={modal === 'message'} onClose={() => setModal(null)} lead={lead} />
       <TaskFormModal open={modal === 'task'} onClose={() => setModal(null)} subject={{ type: 'lead', id: lead.id, name: lead.full_name }} />
       <ConvertModal open={modal === 'convert'} onClose={() => setModal(null)} lead={lead} />
       <AssignModal open={modal === 'assign'} onClose={() => setModal(null)} lead={lead} />

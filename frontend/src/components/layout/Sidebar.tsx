@@ -62,15 +62,15 @@ export function Sidebar() {
       {mobileOpen && <div className="fixed inset-0 z-40 bg-ink-950/40 backdrop-blur-sm lg:hidden" onClick={close} />}
       <aside
         className={clsx(
-          'glass fixed top-3 bottom-3 left-3 z-50 flex flex-col rounded-[28px] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          'glass glass-blur fixed top-3 bottom-3 left-3 z-50 flex flex-col rounded-[28px] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
           collapsed ? 'lg:w-[76px]' : 'lg:w-[248px]',
           mobileOpen ? 'w-[248px] translate-x-0' : 'w-[248px] -translate-x-[120%] lg:translate-x-0',
         )}
       >
         <div className={clsx('flex h-[72px] items-center gap-2 px-4', collapsed && 'lg:justify-center lg:px-0')}>
           <div className="relative flex size-11 shrink-0 items-center justify-center">
-            <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] blur-[5px]" />
-            <span className="relative flex size-11 items-center justify-center rounded-2xl bg-ink-900 text-white">
+            <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] p-0.5" />
+            <span className="relative m-0.5 flex size-10 items-center justify-center rounded-[14px] bg-ink-900 text-white">
               <Sparkles className="size-5" />
             </span>
           </div>

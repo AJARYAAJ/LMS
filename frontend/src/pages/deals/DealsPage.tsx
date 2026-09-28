@@ -6,7 +6,7 @@ import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
 import { useDealBoardQuery, useDealsQuery, useMoveDealMutation } from '@/services/api'
 import { Avatar, Badge, Button, EmptyState, Input, PageHeader, Pagination, Segmented, Select, Skeleton, StatCard } from '@/components/ui'
 import { date, money } from '@/lib/format'
-import { DealFormModal } from './DealFormModal'
+import { DealFormModal, LostDealModal } from './DealFormModal'
 
 export function DealsPage() {
   const navigate = useNavigate()
@@ -20,6 +20,7 @@ export function DealsPage() {
   const [status, setStatus] = useState('')
   const [dragOver, setDragOver] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [lostMove, setLostMove] = useState<{ id: number; stageId: number } | null>(null)
   const board = useDealBoardQuery({ search, owner_id: owner }, { skip: view !== 'board' })
   const list = useDealsQuery({ search, owner_id: owner, status, page }, { skip: view !== 'list' })
   const [move] = useMoveDealMutation()
@@ -35,7 +36,9 @@ export function DealsPage() {
     e.preventDefault()
     setDragOver(null)
     const { id, from } = JSON.parse(e.dataTransfer.getData('application/json'))
-    if (from !== stageId) run(move({ id, pipeline_stage_id: stageId }), 'Deal moved')
+    if (from === stageId) return
+    if (board.data?.find((c) => c.stage.id === stageId)?.stage.is_lost) setLostMove({ id, stageId })
+    else run(move({ id, pipeline_stage_id: stageId }), 'Deal moved')
   }
 
   return (
@@ -126,6 +129,7 @@ export function DealsPage() {
         </div>
       )}
       <DealFormModal open={showForm} onClose={() => setShowForm(false)} />
+      <LostDealModal open={!!lostMove} onClose={() => setLostMove(null)} onConfirm={async (reason) => { if (lostMove && (await run(move({ id: lostMove.id, pipeline_stage_id: lostMove.stageId, lost_reason: reason }), 'Deal marked lost'))) setLostMove(null) }} />
     </div>
   )
 }

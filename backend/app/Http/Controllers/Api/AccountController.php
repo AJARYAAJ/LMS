@@ -56,6 +56,7 @@ class AccountController extends ResourceController
             'annual_revenue' => ['nullable', 'numeric', 'min:0'],
             'owner_id' => ['nullable', Rules::exists('users')],
             'description' => ['nullable', 'string', 'max:5000'],
+            'custom_fields' => ['nullable', 'array'],
         ];
     }
 }

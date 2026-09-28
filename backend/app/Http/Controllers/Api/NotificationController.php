@@ -13,7 +13,7 @@ class NotificationController extends Controller
         $user = $request->user();
 
         return response()->json([
-            'data' => $user->notifications()->limit(30)->get()->map(fn ($n) => [
+            'data' => $user->notifications()->limit(min((int) request()->query('limit', 30), 200))->get()->map(fn ($n) => [
                 'id' => $n->id,
                 ...$n->data,
                 'read_at' => $n->read_at,

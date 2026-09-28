@@ -7,6 +7,7 @@ use App\Models\Lead;
 use App\Models\LeadStatus;
 use App\Models\User;
 use App\Services\DuplicateDetector;
+use App\Services\LeadSegment;
 use App\Services\LeadService;
 use App\Services\ScoringEngine;
 use App\Support\Rules;
@@ -318,6 +319,12 @@ class LeadController extends Controller
             })
             ->when($request->query('converted') !== null, fn ($q) => $request->boolean('converted') ? $q->whereNotNull('converted_at') : $q->whereNull('converted_at'))
             ->when($request->query('min_score'), fn ($q, $v) => $q->where('score', '>=', (int) $v))
+            ->when($request->query('conditions'), function ($q, $v) {
+                $conditions = json_decode($v, true);
+                if (is_array($conditions)) {
+                    app(LeadSegment::class)->apply($q, $conditions);
+                }
+            })
             ->when($request->query('created_from'), fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->query('created_to'), fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
             ->when($request->query('follow_up'), function ($q, $v) {

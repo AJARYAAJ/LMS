@@ -35,40 +35,56 @@ class ReportController extends Controller
 
         $rate = fn (int $part, int $whole) => $whole ? round($part / $whole * 100, 1) : 0;
 
-        $sources = LeadSource::orderBy('name')->get()->map(function (LeadSource $source) use ($base, $rate) {
-            $q = fn () => $base()->where('lead_source_id', $source->id);
-            $count = $q()->count();
-            $converted = $q()->whereNotNull('converted_at')->count();
+        // One grouped query per dimension instead of one query per row.
+        $grouped = fn (string $column) => $base()
+            ->selectRaw("{$column} as k, count(*) as leads")
+            ->selectRaw('sum(case when qualified_at is not null or converted_at is not null then 1 else 0 end) as qualified')
+            ->selectRaw('sum(case when converted_at is not null then 1 else 0 end) as converted')
+            ->selectRaw('coalesce(sum(expected_value), 0) as value')
+            ->groupBy($column)
+            ->get()
+            ->keyBy('k');
+
+        $bySource = $grouped('lead_source_id');
+        $sources = LeadSource::orderBy('name')->get()->map(function (LeadSource $source) use ($bySource, $rate) {
+            $row = $bySource[$source->id] ?? null;
 
             return [
                 'id' => $source->id, 'name' => $source->name, 'color' => $source->color,
-                'leads' => $count,
-                'qualified' => $q()->where(fn ($x) => $x->whereNotNull('qualified_at')->orWhereNotNull('converted_at'))->count(),
-                'converted' => $converted,
-                'conversion_rate' => $rate($converted, $count),
-                'value' => (float) $q()->sum('expected_value'),
+                'leads' => (int) ($row->leads ?? 0),
+                'qualified' => (int) ($row->qualified ?? 0),
+                'converted' => (int) ($row->converted ?? 0),
+                'conversion_rate' => $rate((int) ($row->converted ?? 0), (int) ($row->leads ?? 0)),
+                'value' => (float) ($row->value ?? 0),
             ];
         })->filter(fn ($s) => $s['leads'] > 0)->values();
 
+        $byOwner = $grouped('owner_id');
+        $activities = Activity::where('type', '!=', 'system')->whereBetween('occurred_at', [$from, $to])
+            ->selectRaw('user_id, count(*) as c')->groupBy('user_id')->pluck('c', 'user_id');
+        $won = Deal::where('status', 'won')->whereBetween('closed_at', [$from, $to])
+            ->selectRaw('owner_id, coalesce(sum(amount), 0) as v')->groupBy('owner_id')->pluck('v', 'owner_id');
+
         $reps = User::where('role', '!=', User::VIEWER)->orderBy('name')->get()
             ->when($user->role === User::SALES_REP, fn ($c) => $c->where('id', $user->id))
-            ->map(function (User $rep) use ($base, $from, $to, $rate) {
-                $count = $base()->where('owner_id', $rep->id)->count();
-                $converted = $base()->where('owner_id', $rep->id)->whereNotNull('converted_at')->count();
+            ->map(function (User $rep) use ($byOwner, $activities, $won, $rate) {
+                $row = $byOwner[$rep->id] ?? null;
 
                 return [
                     'id' => $rep->id, 'name' => $rep->name, 'avatar_color' => $rep->avatar_color,
-                    'leads' => $count,
-                    'converted' => $converted,
-                    'conversion_rate' => $rate($converted, $count),
-                    'activities' => Activity::where('user_id', $rep->id)->where('type', '!=', 'system')->whereBetween('occurred_at', [$from, $to])->count(),
-                    'won_value' => (float) Deal::where('owner_id', $rep->id)->where('status', 'won')->whereBetween('closed_at', [$from, $to])->sum('amount'),
+                    'leads' => (int) ($row->leads ?? 0),
+                    'converted' => (int) ($row->converted ?? 0),
+                    'conversion_rate' => $rate((int) ($row->converted ?? 0), (int) ($row->leads ?? 0)),
+                    'activities' => (int) ($activities[$rep->id] ?? 0),
+                    'won_value' => (float) ($won[$rep->id] ?? 0),
                 ];
             })->values();
 
-        $campaigns = Campaign::orderBy('name')->get()->map(function (Campaign $c) use ($base, $rate) {
-            $count = $base()->where('campaign_id', $c->id)->count();
-            $converted = $base()->where('campaign_id', $c->id)->whereNotNull('converted_at')->count();
+        $byCampaign = $grouped('campaign_id');
+        $campaigns = Campaign::orderBy('name')->get()->map(function (Campaign $c) use ($byCampaign, $rate) {
+            $row = $byCampaign[$c->id] ?? null;
+            $count = (int) ($row->leads ?? 0);
+            $converted = (int) ($row->converted ?? 0);
             $cost = (float) ($c->actual_cost ?? $c->budget ?? 0);
 
             return [
@@ -80,12 +96,17 @@ class ReportController extends Controller
             ];
         })->filter(fn ($c) => $c['leads'] > 0 || $c['status'] === 'active')->values();
 
-        $open = Lead::visibleTo($user)->whereNull('converted_at')->pluck('created_at');
+        $row = Lead::visibleTo($user)->whereNull('converted_at')
+            ->selectRaw('sum(case when created_at >= ? then 1 else 0 end) as a', [now()->subDays(7)])
+            ->selectRaw('sum(case when created_at < ? and created_at >= ? then 1 else 0 end) as b', [now()->subDays(7), now()->subDays(30)])
+            ->selectRaw('sum(case when created_at < ? and created_at >= ? then 1 else 0 end) as c', [now()->subDays(30), now()->subDays(60)])
+            ->selectRaw('sum(case when created_at < ? then 1 else 0 end) as d', [now()->subDays(60)])
+            ->first();
         $aging = [
-            ['bucket' => '0–7 days', 'count' => $open->filter(fn ($d) => $d->diffInDays(now()) <= 7)->count()],
-            ['bucket' => '8–30 days', 'count' => $open->filter(fn ($d) => $d->diffInDays(now()) > 7 && $d->diffInDays(now()) <= 30)->count()],
-            ['bucket' => '31–60 days', 'count' => $open->filter(fn ($d) => $d->diffInDays(now()) > 30 && $d->diffInDays(now()) <= 60)->count()],
-            ['bucket' => '60+ days', 'count' => $open->filter(fn ($d) => $d->diffInDays(now()) > 60)->count()],
+            ['bucket' => '0–7 days', 'count' => (int) $row->a],
+            ['bucket' => '8–30 days', 'count' => (int) $row->b],
+            ['bucket' => '31–60 days', 'count' => (int) $row->c],
+            ['bucket' => '60+ days', 'count' => (int) $row->d],
         ];
 
         return response()->json(['data' => [

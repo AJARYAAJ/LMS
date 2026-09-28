@@ -13,15 +13,16 @@ See [`docs/PLAN_OF_ACTION.md`](docs/PLAN_OF_ACTION.md) for the feature-parity ma
 | Area | What you get |
 |---|---|
 | Capture | Manual entry with duplicate warning, CSV import (auto header mapping, duplicate skip), CSV export, API-key capture endpoint with UTM tracking, **hosted/embeddable web forms** |
+| AI | Optional **AI lead brief** by Claude (summary, next best action, talking points, risk) — set `ANTHROPIC_API_KEY` |
 | Lead workspace | Aura header with score orb, blueprint-aware journey stepper, **smart insights + next best action**, qualification checklist (BANT), timeline, notes (pin), tasks, sequences, stage history, score breakdown |
 | Lifecycle | Configurable statuses with categories, **blueprint required fields per stage**, lost reasons, conversion to Contact + Account + Deal |
 | Routing | Assignment rules (round robin, least loaded, specific user, team pools, conditions), **unassigned queue with claim** |
 | Scoring | Explainable rule-based scoring with manual adjustments, ratings (cold → very high intent) |
-| Engagement | Activity logging (call/email/meeting/SMS/WhatsApp), **email templates with merge fields + send**, **sequences/cadences**, task calendar, reminders |
+| Engagement | Activity logging, **email templates with merge fields + send**, **SMS & WhatsApp sending (Twilio)**, **sequences/cadences**, task calendar, reminders, notes & tasks on every record |
 | Automation | WHEN / IF / THEN workflow builder (tasks, notifications, field updates, tags, status, assignment, notes) with execution log |
 | Pipeline | Drag-and-drop deal board, weighted forecast, deal/contact/account workspaces |
 | Analytics | Dashboard (KPIs, lead flow, sources, stages, temperature, engagement heatmap), funnel, source ROI, team leaderboard, campaign cost-per-lead, lead aging |
-| Common | Global search / command palette, notifications centre, saved views, bulk actions, **merge duplicates**, **recycle bin**, audit log, profile & theme, custom fields, teams, RBAC |
+| Common | Global search / command palette, notifications centre + page, saved views, **advanced segment builder**, custom fields on leads/contacts/accounts/deals, **installable PWA**, bulk actions, **merge duplicates**, **recycle bin**, audit log, profile & theme, custom fields, teams, RBAC |
 | Integrations | Signed webhooks (HMAC-SHA256, retries), API keys, REST API under `/api/v1` |
 
 ### Roles
@@ -48,6 +49,8 @@ npm run dev                             # http://localhost:5173 (proxies /api to
 ```
 
 Demo logins (password `password`): `admin@lms.test`, `manager@lms.test`, `riley@lms.test` (sales rep), `viewer@lms.test`.
+
+Optional integrations (see `backend/.env.example`): `ANTHROPIC_API_KEY` for AI briefs, `MESSAGING_DRIVER=twilio` + `TWILIO_*` for real SMS/WhatsApp, `MAIL_*` for email delivery (docker-compose ships Mailpit).
 
 Optional background processes:
 

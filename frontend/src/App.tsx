@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
+import { lazyPage } from '@/lib/lazyPage'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout, RequireRole } from '@/components/layout/AppLayout'
 import { PageLoader, Toaster } from '@/components/ui'
@@ -6,28 +7,42 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 
 // Pages are code-split so the first load stays small.
-const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
-const LeadsPage = lazy(() => import('@/pages/leads/LeadsPage').then((m) => ({ default: m.LeadsPage })))
-const LeadDetailPage = lazy(() => import('@/pages/leads/LeadDetailPage').then((m) => ({ default: m.LeadDetailPage })))
-const QueuePage = lazy(() => import('@/pages/leads/QueuePage').then((m) => ({ default: m.QueuePage })))
-const TrashPage = lazy(() => import('@/pages/leads/TrashPage').then((m) => ({ default: m.TrashPage })))
-const DealsPage = lazy(() => import('@/pages/deals/DealsPage').then((m) => ({ default: m.DealsPage })))
-const DealDetailPage = lazy(() => import('@/pages/deals/DealDetailPage').then((m) => ({ default: m.DealDetailPage })))
-const ContactDetailPage = lazy(() => import('@/pages/contacts/ContactsPage').then((m) => ({ default: m.ContactDetailPage })))
-const ContactsPage = lazy(() => import('@/pages/contacts/ContactsPage').then((m) => ({ default: m.ContactsPage })))
-const AccountDetailPage = lazy(() => import('@/pages/accounts/AccountsPage').then((m) => ({ default: m.AccountDetailPage })))
-const AccountsPage = lazy(() => import('@/pages/accounts/AccountsPage').then((m) => ({ default: m.AccountsPage })))
-const TasksPage = lazy(() => import('@/pages/tasks/TasksPage').then((m) => ({ default: m.TasksPage })))
-const ReportsPage = lazy(() => import('@/pages/ReportsPage').then((m) => ({ default: m.ReportsPage })))
-const CampaignsPage = lazy(() => import('@/pages/CampaignsPage').then((m) => ({ default: m.CampaignsPage })))
-const PlaybooksPage = lazy(() => import('@/pages/PlaybooksPage').then((m) => ({ default: m.PlaybooksPage })))
-const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
-const AuditLogPage = lazy(() => import('@/pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })))
-const ProfilePage = lazy(() => import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
-const PublicFormPage = lazy(() => import('@/pages/PublicFormPage').then((m) => ({ default: m.PublicFormPage })))
-const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })))
+const DashboardPage = lazyPage(() => import('@/pages/DashboardPage'), 'DashboardPage')
+const LeadsPage = lazyPage(() => import('@/pages/leads/LeadsPage'), 'LeadsPage')
+const LeadDetailPage = lazyPage(() => import('@/pages/leads/LeadDetailPage'), 'LeadDetailPage')
+const QueuePage = lazyPage(() => import('@/pages/leads/QueuePage'), 'QueuePage')
+const TrashPage = lazyPage(() => import('@/pages/leads/TrashPage'), 'TrashPage')
+const DealsPage = lazyPage(() => import('@/pages/deals/DealsPage'), 'DealsPage')
+const DealDetailPage = lazyPage(() => import('@/pages/deals/DealDetailPage'), 'DealDetailPage')
+const ContactDetailPage = lazyPage(() => import('@/pages/contacts/ContactsPage'), 'ContactDetailPage')
+const ContactsPage = lazyPage(() => import('@/pages/contacts/ContactsPage'), 'ContactsPage')
+const AccountDetailPage = lazyPage(() => import('@/pages/accounts/AccountsPage'), 'AccountDetailPage')
+const AccountsPage = lazyPage(() => import('@/pages/accounts/AccountsPage'), 'AccountsPage')
+const TasksPage = lazyPage(() => import('@/pages/tasks/TasksPage'), 'TasksPage')
+const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
+const CampaignsPage = lazyPage(() => import('@/pages/CampaignsPage'), 'CampaignsPage')
+const PlaybooksPage = lazyPage(() => import('@/pages/PlaybooksPage'), 'PlaybooksPage')
+const SettingsPage = lazyPage(() => import('@/pages/settings/SettingsPage'), 'SettingsPage')
+const AuditLogPage = lazyPage(() => import('@/pages/AuditLogPage'), 'AuditLogPage')
+const ProfilePage = lazyPage(() => import('@/pages/ProfilePage'), 'ProfilePage')
+const PublicFormPage = lazyPage(() => import('@/pages/PublicFormPage'), 'PublicFormPage')
+const NotificationsPage = lazyPage(() => import('@/pages/NotificationsPage'), 'NotificationsPage')
+const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage')
+
+const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, NotFoundPage]
+
+/** Load every page chunk once the browser is idle so navigation never waits. */
+function usePrefetchPages() {
+  useEffect(() => {
+    const load = () => PAGES.forEach((p) => p.preload())
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number }
+    if (w.requestIdleCallback) w.requestIdleCallback(load)
+    else window.setTimeout(load, 1200)
+  }, [])
+}
 
 export default function App() {
+  usePrefetchPages()
   return (
     <>
       <Suspense fallback={<PageLoader />}>
@@ -55,6 +70,7 @@ export default function App() {
           <Route path="settings/:section" element={<RequireRole allow="admin"><SettingsPage /></RequireRole>} />
           <Route path="audit-log" element={<RequireRole allow="manager"><AuditLogPage /></RequireRole>} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

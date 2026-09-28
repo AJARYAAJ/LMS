@@ -9,7 +9,7 @@ const variants: Record<Variant, string> = {
   primary:
     'bg-[linear-gradient(135deg,#7c3aed,#c026d3_60%,#db2777)] bg-[length:160%_160%] bg-left text-white shadow-[0_8px_24px_-8px_rgba(192,38,211,0.6),inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-right hover:shadow-[0_12px_32px_-8px_rgba(192,38,211,0.75),inset_0_1px_0_rgba(255,255,255,0.25)] focus-visible:ring-fuchsia-500/40',
   secondary:
-    'border border-slate-200/90 bg-white/70 text-slate-700 shadow-sm backdrop-blur hover:border-brand-200 hover:bg-white focus-visible:ring-brand-400/30 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.09]',
+    'border border-slate-200/90 bg-white/70 text-slate-700 shadow-sm hover:border-brand-200 hover:bg-white focus-visible:ring-brand-400/30 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-200 dark:hover:bg-white/[0.09]',
   ghost: 'text-slate-600 hover:bg-slate-900/[0.05] hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.07] dark:hover:text-white',
   subtle: 'bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20',
   danger: 'bg-rose-600 text-white shadow-sm hover:bg-rose-700 focus-visible:ring-rose-500/40',

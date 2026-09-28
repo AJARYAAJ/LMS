@@ -12,6 +12,11 @@ applyTheme(store.getState().ui.theme)
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(store.getState().ui.theme))
 installSpotlight()
 
+// Installable app (PWA): register the service worker in production builds only.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => undefined))
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>

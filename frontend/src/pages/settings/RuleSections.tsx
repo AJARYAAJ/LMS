@@ -10,7 +10,7 @@ import { Avatar, Badge, Button, Card, ColorPicker, ConfirmDialog, EmptyState, Fi
 import { OPERATOR_LABELS } from '@/lib/constants'
 import { ago, humanize } from '@/lib/format'
 import type { AssignmentRule, AutomationAction, AutomationRule, Condition, ScoringRule, WebForm, WebFormField } from '@/types'
-import { ConditionBuilder, SectionHeader } from './shared'
+import { ConditionBuilder, SectionHeader } from '@/components/crm/ConditionBuilder'
 
 function describe(conditions: Condition[] | null) {
   if (!conditions?.length) return 'every lead'
@@ -403,7 +403,7 @@ export function Integrations() {
   const [testHook] = useTestWebhookMutation()
   const [keyName, setKeyName] = useState('')
   const [revealed, setRevealed] = useState<{ label: string; value: string } | null>(null)
-  const [hookForm, setHookForm] = useState<{ open: boolean; name: string; url: string; events: string[] }>({ open: false, name: '', url: '', events: ['lead.created'] })
+  const [hookForm, setHookForm] = useState<{ open: boolean; id?: number; name: string; url: string; events: string[] }>({ open: false, name: '', url: '', events: ['lead.created'] })
   const [revoking, setRevoking] = useState<number | null>(null)
   const origin = window.location.origin
 
@@ -439,7 +439,9 @@ export function Integrations() {
                 <div className="min-w-0 flex-1"><p className="font-medium">{h.name}</p><p className="truncate font-mono text-xs text-slate-500">{h.url}</p></div>
                 <div className="flex flex-wrap gap-1">{h.events.map((e) => <Badge key={e}>{e}</Badge>)}</div>
                 <span className="text-xs text-slate-400">{h.last_triggered_at ? `${h.last_status} · ${ago(h.last_triggered_at)}` : 'not yet sent'}</span>
+                <Toggle checked={h.is_active} onChange={(v) => run(save({ ...resources.webhooks, id: h.id, body: { is_active: v } }), v ? 'Webhook enabled' : 'Webhook paused')} />
                 <Button size="xs" variant="secondary" icon={<Play className="size-3" />} onClick={() => run(testHook(h.id), 'Test event queued')}>Test</Button>
+                <button onClick={() => setHookForm({ open: true, id: h.id, name: h.name, url: h.url, events: h.events })} className="p-1 text-slate-400 hover:text-brand-600" aria-label="Edit webhook"><Pencil className="size-4" /></button>
                 <button onClick={() => run(remove({ ...resources.webhooks, id: h.id }), 'Webhook deleted')} className="p-1 text-slate-400 hover:text-rose-600" aria-label="Delete"><Trash2 className="size-4" /></button>
               </li>
             ))}
@@ -448,9 +450,9 @@ export function Integrations() {
         </Card>
       </div>
 
-      <Modal open={hookForm.open} onClose={() => setHookForm((f) => ({ ...f, open: false }))} title="Add webhook"
+      <Modal open={hookForm.open} onClose={() => setHookForm((f) => ({ ...f, open: false }))} title={hookForm.id ? 'Edit webhook' : 'Add webhook'}
         footer={<><Button variant="secondary" onClick={() => setHookForm((f) => ({ ...f, open: false }))}>Cancel</Button><Button disabled={!hookForm.name || !hookForm.url || !hookForm.events.length} loading={saveState.isLoading}
-          onClick={async () => { const r = await run(save({ ...resources.webhooks, body: { name: hookForm.name, url: hookForm.url, events: hookForm.events } })); if (r) { setHookForm((f) => ({ ...f, open: false })); if (r.secret) setRevealed({ label: 'Signing secret', value: r.secret }) } }}>Create</Button></>}>
+          onClick={async () => { const r = await run(save({ ...resources.webhooks, id: hookForm.id, body: { name: hookForm.name, url: hookForm.url, events: hookForm.events } }), hookForm.id ? 'Webhook updated' : undefined); if (r) { setHookForm((f) => ({ ...f, open: false })); if (r.secret) setRevealed({ label: 'Signing secret', value: r.secret }) } }}>{hookForm.id ? 'Save' : 'Create'}</Button></>}>
         <div className="space-y-4">
           <Field label="Name" required><Input value={hookForm.name} onChange={(e) => setHookForm((f) => ({ ...f, name: e.target.value }))} /></Field>
           <Field label="URL" required><Input value={hookForm.url} onChange={(e) => setHookForm((f) => ({ ...f, url: e.target.value }))} placeholder="https://example.com/hooks/lms" /></Field>

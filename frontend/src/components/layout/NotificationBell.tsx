@@ -67,6 +67,7 @@ export function NotificationBell() {
               )
             })}
           </div>
+          <button onClick={() => { navigate('/notifications'); close() }} className="mt-1 w-full rounded-xl border-t border-slate-200/60 px-3 py-2 text-center text-xs font-medium text-brand-600 hover:bg-brand-50 dark:border-white/[0.06] dark:hover:bg-white/[0.05]">View all notifications</button>
         </div>
       )}
     </Menu>

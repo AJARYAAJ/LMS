@@ -101,8 +101,8 @@ export function PageHeader({ title, description, actions, icon }: { title: React
       <div className="flex items-center gap-3">
         {icon && (
           <div className="relative hidden size-12 items-center justify-center sm:flex">
-            <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] opacity-80 blur-[6px]" />
-            <span className="relative flex size-12 items-center justify-center rounded-2xl bg-white/90 text-brand-600 shadow-inner dark:bg-ink-900/90 dark:text-brand-300 [&>svg]:size-5">{icon}</span>
+            <span className="absolute inset-0 animate-spin-slow rounded-2xl bg-[conic-gradient(from_0deg,#8b5cf6,#d946ef,#06b6d4,#8b5cf6)] p-0.5" />
+            <span className="relative m-0.5 flex size-11 items-center justify-center rounded-[14px] bg-white text-brand-600 dark:bg-ink-900 dark:text-brand-300 [&>svg]:size-5">{icon}</span>
           </div>
         )}
         <div>
@@ -125,7 +125,7 @@ export function StatCard({ label, value, icon, delta, hint, accent = '#6366f1' }
 }) {
   return (
     <div className="card group overflow-hidden p-5">
-      <div className="absolute -top-12 -right-12 -z-10 size-36 rounded-full opacity-25 blur-2xl transition-all duration-700 group-hover:scale-125 group-hover:opacity-40" style={{ backgroundColor: accent }} />
+      <div className="absolute -top-16 -right-16 -z-10 size-48 rounded-full opacity-40 transition-transform duration-700 group-hover:scale-125" style={{ background: `radial-gradient(circle, ${accent}55 0%, transparent 65%)` }} />
       <div className="flex items-start justify-between">
         <p className="text-[11px] font-semibold tracking-[0.08em] text-slate-500 uppercase dark:text-slate-400">{label}</p>
         {icon && (

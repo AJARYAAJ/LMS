@@ -3,12 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import { ArrowLeft, Building2, Check, Pencil, Phone, Target, Trash2, Trophy, User } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
-import { useActivitiesQuery, useDealQuery, useDeleteDealMutation, useMetaQuery, useMoveDealMutation } from '@/services/api'
+import { useDealQuery, useDeleteDealMutation, useMetaQuery, useMoveDealMutation } from '@/services/api'
 import { Avatar, Badge, Button, Card, ConfirmDialog, DescriptionList, EmptyState, PageLoader } from '@/components/ui'
-import { Timeline } from '@/components/crm/Timeline'
+import { RecordPanels, useCustomFieldRows } from '@/components/crm/RecordPanels'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { date, money } from '@/lib/format'
-import { DealFormModal } from './DealFormModal'
+import { DealFormModal, LostDealModal } from './DealFormModal'
 
 export function DealDetailPage() {
   const id = Number(useParams().id)
@@ -18,10 +18,11 @@ export function DealDetailPage() {
   const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
   const { data: deal, isLoading } = useDealQuery(id)
   const { data: meta } = useMetaQuery()
-  const { data: activities } = useActivitiesQuery({ type: 'deals', id, per_page: 50 })
   const [move] = useMoveDealMutation()
   const [remove, removeState] = useDeleteDealMutation()
   const [modal, setModal] = useState<null | 'edit' | 'activity' | 'delete'>(null)
+  const [lostStage, setLostStage] = useState<number | null>(null)
+  const customRows = useCustomFieldRows('deal', deal?.custom_fields)
 
   if (isLoading) return <PageLoader />
   if (!deal) return <EmptyState title="Deal not found" />
@@ -68,7 +69,7 @@ export function DealDetailPage() {
             const current = s.id === deal.pipeline_stage_id
             return (
               <li key={s.id} className="min-w-28 flex-1">
-                <button disabled={!write || current} onClick={() => run(move({ id: deal.id, pipeline_stage_id: s.id }), `Moved to ${s.name}`)}
+                <button disabled={!write || current} onClick={() => s.is_lost ? setLostStage(s.id) : run(move({ id: deal.id, pipeline_stage_id: s.id }), `Moved to ${s.name}`)}
                   className={clsx('flex w-full items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-sm font-medium transition-all', current ? 'text-white shadow-lg' : 'text-slate-500 hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.05]')}
                   style={current ? { background: `linear-gradient(135deg, ${s.color}, ${s.color}bb)` } : undefined}>
                   {s.is_won ? <Trophy className="size-4" /> : current ? <Check className="size-4" /> : null}{s.name}
@@ -80,7 +81,7 @@ export function DealDetailPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card title="Timeline">{activities?.data.length ? <Timeline items={activities.data} /> : <EmptyState title="No activity yet" />}</Card>
+        <RecordPanels type="deals" id={deal.id} name={deal.name} />
         <Card title="Details">
           <DescriptionList items={[
             { label: 'Owner', value: deal.owner && <span className="inline-flex items-center gap-2"><Avatar name={deal.owner.name} color={deal.owner.avatar_color} size="xs" />{deal.owner.name}</span> },
@@ -88,11 +89,13 @@ export function DealDetailPage() {
             { label: 'Closed', value: deal.closed_at && date(deal.closed_at) },
             { label: 'Lost reason', value: deal.lost_reason },
             { label: 'Created', value: date(deal.created_at) },
+            ...customRows,
           ]} />
           {deal.description && <p className="mt-4 text-sm whitespace-pre-line text-slate-600 dark:text-slate-400">{deal.description}</p>}
         </Card>
       </div>
 
+      <LostDealModal open={lostStage !== null} onClose={() => setLostStage(null)} onConfirm={async (reason) => { if (lostStage && (await run(move({ id: deal.id, pipeline_stage_id: lostStage, lost_reason: reason }), 'Deal marked lost'))) setLostStage(null) }} />
       <DealFormModal open={modal === 'edit'} onClose={() => setModal(null)} deal={deal} />
       <ActivityModal open={modal === 'activity'} onClose={() => setModal(null)} subjectType="deals" subjectId={deal.id} />
       <ConfirmDialog open={modal === 'delete'} onClose={() => setModal(null)} title="Delete deal?" loading={removeState.isLoading}

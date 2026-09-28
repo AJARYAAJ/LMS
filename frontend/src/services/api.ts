@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
 import type {
-  Account, Activity, ApiKey, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
+  Account, Activity, AiBrief, ApiKey, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
   ScoringRule, SearchResult, Tag, Task, Team, User, Webhook,
 } from '@/types'
@@ -140,8 +140,8 @@ export const api = createApi({
       transformResponse: (r: { data: Activity[] }) => r.data,
       providesTags: ['Activity'],
     }),
-    notifications: b.query<{ data: AppNotification[]; unread: number }, void>({
-      query: () => 'notifications',
+    notifications: b.query<{ data: AppNotification[]; unread: number }, number | void>({
+      query: (limit) => ({ url: 'notifications', params: { limit: limit ?? 30 } }),
       providesTags: ['Notification'],
     }),
     readNotification: b.mutation<void, string>({
@@ -294,6 +294,14 @@ export const api = createApi({
     stopEnrollment: b.mutation<void, number>({
       query: (id) => ({ url: `enrollments/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Enrollment', 'Task', 'Activity', 'Sequence'],
+    }),
+    aiBrief: b.mutation<AiBrief, { id: number; refresh?: boolean }>({
+      query: ({ id, refresh }) => ({ url: `leads/${id}/ai-brief`, method: 'POST', params: refresh ? { refresh: 1 } : undefined }),
+      transformResponse: (r: { data: AiBrief }) => r.data,
+    }),
+    sendMessage: b.mutation<{ message: string }, { id: number; channel: 'sms' | 'whatsapp'; body: string }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/message`, method: 'POST', body }),
+      invalidatesTags: ['Activity', 'Lead', 'Insights'],
     }),
     publicForm: b.query<Pick<WebForm, 'name' | 'slug' | 'title' | 'description' | 'submit_label' | 'success_message' | 'redirect_url' | 'accent_color'> & { fields: WebFormField[]; organization: string }, string>({
       query: (slug) => `forms/${slug}`,
@@ -463,7 +471,7 @@ export const {
   useApiKeysQuery, useCreateApiKeyMutation, useRevokeApiKeyMutation,
   useLeadQueueQuery, useClaimLeadMutation, useMergeLeadMutation, useTrashQuery, useRestoreLeadMutation,
   useUpdateQualificationMutation, useInsightsQuery, useSendEmailMutation, usePreviewEmailMutation,
-  useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
+  useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
 
 // Typed helpers for settings resources.

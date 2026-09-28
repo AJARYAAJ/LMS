@@ -42,9 +42,12 @@ Legend: ✅ built · 🆕 added in this iteration · ⏭ later phase
 | Notifications (assignment, automation, reminders) | all | ✅ |
 | Signed webhooks + retry | HubSpot webhooks | ✅ |
 | Teams, campaigns with cost/CPL | Salesforce campaigns | ✅ |
-| Real email/SMS/WhatsApp provider integrations | — | ⏭ (logging + Laravel Mail now; providers pluggable) |
-| LLM-generated summaries | — | ⏭ (insights endpoint is the integration point) |
-| Mobile native app | — | ⏭ (SPA is fully responsive) |
+| Email (SMTP via Laravel Mail), **SMS & WhatsApp (Twilio driver, log driver for dev)** | HubSpot/Zoho omnichannel | ✅ |
+| **AI lead brief** (Claude: summary, next action, talking points, risk; cached, optional) | Zoho Zia / Einstein | ✅ |
+| **Advanced segmentation** (condition builder on the lead list, saved as views) | HubSpot lists / Salesforce list views | ✅ |
+| **Custom fields on contacts, accounts and deals** | Salesforce/HubSpot properties | ✅ |
+| **Notes & tasks on every record**, lost-deal reasons, notifications centre page, webhook edit/pause | all | ✅ |
+| **Installable mobile app (PWA)** — manifest, icons, offline shell, home-screen shortcuts | mobile CRM apps | ✅ (native store apps ⏭) |
 
 ## 2. Phases
 
@@ -73,3 +76,15 @@ Not a stock admin template. Principles:
 - All endpoints covered by feature tests (tenant isolation, RBAC, lifecycle, new parity features) and green on SQLite + PostgreSQL.
 - `npm run build` (strict TypeScript) passes.
 - Every page opened in a real browser against the seeded demo org, screenshots reviewed in light & dark.
+
+## 5. Performance work (iteration 3)
+
+Measured with 5,000 leads / 20,000 activities and a real browser:
+
+| Metric | Before | After | Fix |
+|---|---|---|---|
+| Dashboard API | 880 ms | 66–104 ms | grouped SQL aggregates instead of loading rows into PHP |
+| Reports API | 980 ms | 62 ms | one grouped query per dimension |
+| Scroll smoothness | 13–16 fps | 60 fps | removed live `backdrop-filter` from cards and blurred background blobs |
+| Page navigation | 320–420 ms | 12–93 ms | non-suspending code-split pages (React 19 holds Suspense fallbacks ≥300 ms) + idle prefetch |
+| Parallel API requests (dev server) | serialized | concurrent | `PHP_CLI_SERVER_WORKERS=4` |

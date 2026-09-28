@@ -14,7 +14,7 @@ import { Avatar, Badge, Button, Card, Checkbox, ColorPicker, ConfirmDialog, Empt
 import { ROLE_LABELS } from '@/lib/constants'
 import { ago, humanize } from '@/lib/format'
 import type { CustomField, LeadSource, LeadStatus, PipelineStage, Tag, Team, User } from '@/types'
-import { SectionHeader } from './shared'
+import { SectionHeader } from '@/components/crm/ConditionBuilder'
 import { AssignmentRules, Automations, Integrations, ScoringRules, WebForms } from './RuleSections'
 
 const sections = [
@@ -375,14 +375,14 @@ function CustomFieldsSection() {
 
   return (
     <>
-      <SectionHeader title="Custom fields" description="Capture business-specific data on leads. Fields appear in the lead form and details panel." action={<Button size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing({})}>Add field</Button>} />
+      <SectionHeader title="Custom fields" description="Capture business-specific data on leads, contacts, accounts and deals. Fields appear in the matching form and details panel." action={<Button size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing({})}>Add field</Button>} />
       <Card padded={false}>
         <table className="w-full">
-          <thead><tr>{['Label', 'Key', 'Type', 'Required', ''].map((h) => <th key={h} className="table-head">{h}</th>)}</tr></thead>
+          <thead><tr>{['Label', 'Key', 'Applies to', 'Type', 'Required', ''].map((h) => <th key={h} className="table-head">{h}</th>)}</tr></thead>
           <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
             {data?.map((f) => (
               <tr key={f.id}>
-                <td className="table-cell font-medium">{f.label}</td><td className="table-cell font-mono text-xs text-slate-500">{f.key}</td>
+                <td className="table-cell font-medium">{f.label}</td><td className="table-cell font-mono text-xs text-slate-500">{f.key}</td><td className="table-cell capitalize">{f.entity}s</td>
                 <td className="table-cell"><Badge>{f.type}</Badge></td><td className="table-cell">{f.is_required ? 'Yes' : '—'}</td>
                 <td className="table-cell text-right">
                   <button onClick={() => setEditing(f)} className="rounded-lg p-1.5 text-slate-400 hover:text-brand-600" aria-label="Edit"><Pencil className="size-4" /></button>
@@ -399,6 +399,7 @@ function CustomFieldsSection() {
           onClick={async () => { if (await run(save({ ...resources.customFields, id: editing?.id, body: { ...form, options: form.type === 'select' ? form.options.split(',').map((o) => o.trim()).filter(Boolean) : null } }), 'Field saved')) setEditing(null) }}>Save</Button></>}>
         <div className="space-y-4">
           <Field label="Label" required><Input value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} /></Field>
+          <Field label="Applies to"><Select value={form.entity} onChange={(e) => setForm((f) => ({ ...f, entity: e.target.value }))}>{['lead', 'contact', 'account', 'deal'].map((t) => <option key={t} value={t}>{humanize(t)}s</option>)}</Select></Field>
           <Field label="Type"><Select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}>{['text', 'textarea', 'number', 'date', 'select', 'boolean'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
           {form.type === 'select' && <Field label="Options" hint="Comma separated"><Input value={form.options} onChange={(e) => setForm((f) => ({ ...f, options: e.target.value }))} /></Field>}
           <Toggle checked={form.is_required} onChange={(v) => setForm((f) => ({ ...f, is_required: v }))} label="Required" />

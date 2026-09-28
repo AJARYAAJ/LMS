@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Mail, Pencil, Phone, Plus, Search, Target, Trash2, Users } from 'lucide-react'
 import { useAction, usePermissions } from '@/app/hooks'
-import { useAccountsQuery, useActivitiesQuery, useContactQuery, useContactsQuery, useDeleteContactMutation, useMetaQuery, useSaveContactMutation } from '@/services/api'
+import { useAccountsQuery, useContactQuery, useContactsQuery, useDeleteContactMutation, useMetaQuery, useSaveContactMutation } from '@/services/api'
 import { Avatar, Badge, Button, Card, ConfirmDialog, DescriptionList, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Pagination, Select } from '@/components/ui'
-import { Timeline } from '@/components/crm/Timeline'
+import { CustomFieldInputs, RecordPanels, useCustomFieldRows } from '@/components/crm/RecordPanels'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { ago, date } from '@/lib/format'
 import type { Contact } from '@/types'
@@ -15,8 +15,10 @@ export function ContactFormModal({ open, onClose, contact }: { open: boolean; on
   const { data: accounts } = useAccountsQuery({ per_page: 100 }, { skip: !open })
   const [save, { isLoading }] = useSaveContactMutation()
   const [form, setForm] = useState<Record<string, string>>({})
+  const [custom, setCustom] = useState<Record<string, unknown>>({})
 
   useEffect(() => {
+    if (open) setCustom(contact?.custom_fields ?? {})
     if (open) setForm({
       first_name: contact?.first_name ?? '', last_name: contact?.last_name ?? '', email: contact?.email ?? '', phone: contact?.phone ?? '',
       job_title: contact?.job_title ?? '', account_id: String(contact?.account_id ?? ''), owner_id: String(contact?.owner_id ?? ''),
@@ -26,7 +28,7 @@ export function ContactFormModal({ open, onClose, contact }: { open: boolean; on
   const set = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const submit = async () => {
     const body = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : k.endsWith('_id') ? Number(v) : v]))
-    if (await run(save({ ...(contact ? { id: contact.id } : {}), ...body } as Partial<Contact>), contact ? 'Contact updated' : 'Contact created')) onClose()
+    if (await run(save({ ...(contact ? { id: contact.id } : {}), ...body, custom_fields: custom } as Partial<Contact>), contact ? 'Contact updated' : 'Contact created')) onClose()
   }
 
   return (
@@ -39,6 +41,7 @@ export function ContactFormModal({ open, onClose, contact }: { open: boolean; on
         <Field label="Job title"><Input value={form.job_title ?? ''} onChange={set('job_title')} /></Field>
         <Field label="Account"><Select value={form.account_id ?? ''} onChange={set('account_id')} placeholder="—">{accounts?.data.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
         <Field label="Owner" className="sm:col-span-2"><Select value={form.owner_id ?? ''} onChange={set('owner_id')} placeholder="—">{meta?.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
+        <CustomFieldInputs entity="contact" value={custom} onChange={setCustom} />
       </div>
     </Modal>
   )
@@ -92,7 +95,7 @@ export function ContactDetailPage() {
   const run = useAction()
   const { write, manager } = usePermissions()
   const { data: c, isLoading } = useContactQuery(id)
-  const { data: activities } = useActivitiesQuery({ type: 'contacts', id, per_page: 50 })
+  const customRows = useCustomFieldRows('contact', c?.custom_fields)
   const [remove] = useDeleteContactMutation()
   const [modal, setModal] = useState<null | 'edit' | 'activity' | 'delete'>(null)
 
@@ -120,14 +123,14 @@ export function ContactDetailPage() {
         </div>}
       </section>
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <Card title="Timeline">{activities?.data.length ? <Timeline items={activities.data} /> : <EmptyState title="No activity yet" />}</Card>
+        <RecordPanels type="contacts" id={c.id} name={`${c.first_name} ${c.last_name ?? ''}`.trim()} />
         <Card title="Deals">
           {c.deals?.length ? c.deals.map((d) => (
             <Link key={d.id} to={`/deals/${d.id}`} className="flex items-center justify-between rounded-xl px-2 py-2 text-sm hover:bg-brand-50 dark:hover:bg-white/5">
               <span>{d.name}</span>{d.stage && <Badge color={d.stage.color}>{d.stage.name}</Badge>}
             </Link>
           )) : <p className="text-sm text-slate-500">No deals.</p>}
-          <div className="mt-4"><DescriptionList items={[{ label: 'Owner', value: c.owner?.name }, { label: 'Created', value: date(c.created_at) }]} /></div>
+          <div className="mt-4"><DescriptionList items={[{ label: 'Owner', value: c.owner?.name }, { label: 'Created', value: date(c.created_at) }, ...customRows]} /></div>
         </Card>
       </div>
       <ContactFormModal open={modal === 'edit'} onClose={() => setModal(null)} contact={c} />

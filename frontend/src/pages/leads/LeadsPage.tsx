@@ -2,7 +2,7 @@ import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  ArrowDownUp, Bookmark, CalendarClock, Download, Filter, Inbox, Recycle, KanbanSquare, List, Plus, Search, Tag as TagIcon, Target, Trash2, Upload, UserPlus, X,
+  ArrowDownUp, Bookmark, CalendarClock, Download, Filter, Inbox, Recycle, KanbanSquare, List, Plus, Search, Sparkles, Tag as TagIcon, Target, Trash2, Upload, UserPlus, X,
 } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions, useToast } from '@/app/hooks'
 import {
@@ -15,11 +15,12 @@ import {
 import { Owner, PriorityBadge, RatingBadge, ScoreBar, StatusBadge } from '@/components/crm/Badges'
 import { ago, friendlyDue, humanize, money } from '@/lib/format'
 import { downloadFile } from '@/lib/download'
-import type { Lead } from '@/types'
+import type { Condition, Lead } from '@/types'
+import { ConditionBuilder } from '@/components/crm/ConditionBuilder'
 import { LeadFormModal } from './LeadFormModal'
 import { ImportModal } from './ImportModal'
 
-const FILTER_KEYS = ['search', 'status_id', 'source_id', 'owner_id', 'priority', 'rating', 'tag_id', 'follow_up', 'campaign_id', 'converted'] as const
+const FILTER_KEYS = ['search', 'status_id', 'source_id', 'owner_id', 'priority', 'rating', 'tag_id', 'follow_up', 'campaign_id', 'team_id', 'converted', 'min_score', 'created_from', 'created_to', 'conditions'] as const
 
 export function LeadsPage() {
   const [params, setParams] = useSearchParams()
@@ -43,6 +44,9 @@ export function LeadsPage() {
   const [showFilters, setShowFilters] = useState(activeFilters.length > 0)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [saveViewOpen, setSaveViewOpen] = useState(false)
+  const segment = useMemo<Condition[]>(() => { try { return JSON.parse(filters.conditions || '[]') } catch { return [] } }, [filters.conditions])
+  const [showSegment, setShowSegment] = useState(segment.length > 0)
+  const [draftSegment, setDraftSegment] = useState<Condition[]>(segment)
   const [viewName, setViewName] = useState('')
 
   const list = useLeadsQuery({ ...filters, page, sort, direction, per_page: 25 }, { skip: view !== 'table' })
@@ -170,6 +174,36 @@ export function LeadsPage() {
               <option value="upcoming">Upcoming</option>
               <option value="none">Not scheduled</option>
             </Select>
+            <Select value={filters.campaign_id} onChange={(e) => update({ campaign_id: e.target.value })} placeholder="Any campaign">
+              {meta?.campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Select value={filters.team_id} onChange={(e) => update({ team_id: e.target.value })} placeholder="Any team">
+              {meta?.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+            <Select value={filters.converted} onChange={(e) => update({ converted: e.target.value })} placeholder="Open & converted">
+              <option value="0">Not converted</option>
+              <option value="1">Converted</option>
+            </Select>
+            <Select value={filters.min_score} onChange={(e) => update({ min_score: e.target.value })} placeholder="Any score">
+              {[30, 50, 60, 80].map((n) => <option key={n} value={n}>Score ≥ {n}</option>)}
+            </Select>
+            <Input type="date" title="Created from" value={filters.created_from} onChange={(e) => update({ created_from: e.target.value })} />
+            <Input type="date" title="Created to" value={filters.created_to} onChange={(e) => update({ created_to: e.target.value })} />
+            <div className="sm:col-span-3 lg:col-span-6">
+              <button onClick={() => setShowSegment((v) => !v)} className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700">
+                <Sparkles className="size-3.5" /> {showSegment ? 'Hide' : 'Advanced'} segment builder{segment.length ? ` · ${segment.length} condition${segment.length > 1 ? 's' : ''}` : ''}
+              </button>
+              {showSegment && (
+                <div className="mt-2 animate-fade-in rounded-2xl border border-brand-200/60 bg-brand-50/30 p-3 dark:border-brand-500/20 dark:bg-brand-500/5">
+                  <ConditionBuilder value={draftSegment} onChange={setDraftSegment} emptyLabel="Combine any lead fields, e.g. country is India AND budget > 10000 AND tag is VIP." />
+                  <div className="mt-3 flex gap-2">
+                    <Button size="xs" onClick={() => update({ conditions: draftSegment.length ? JSON.stringify(draftSegment) : null })}>Apply segment</Button>
+                    {segment.length > 0 && <Button size="xs" variant="ghost" onClick={() => { setDraftSegment([]); update({ conditions: null }) }}>Clear</Button>}
+                    <span className="self-center text-[11px] text-slate-500">Save it with Views → “Save current filters”.</span>
+                  </div>
+                </div>
+              )}
+            </div>
             {activeFilters.length > 0 && (
               <button onClick={clearFilters} className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-rose-600 sm:col-span-3 lg:col-span-6">
                 <X className="size-3.5" /> Clear all filters

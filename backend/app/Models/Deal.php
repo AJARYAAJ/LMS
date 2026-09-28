@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'account_id', 'contact_id', 'lead_id', 'pipeline_stage_id', 'owner_id', 'amount', 'currency', 'probability', 'expected_close_date', 'status', 'closed_at', 'lost_reason', 'description'])]
+#[Fillable(['name', 'account_id', 'contact_id', 'lead_id', 'pipeline_stage_id', 'owner_id', 'amount', 'currency', 'probability', 'expected_close_date', 'status', 'closed_at', 'lost_reason', 'description', 'custom_fields'])]
 class Deal extends Model
 {
     use BelongsToOrganization, SoftDeletes;
@@ -17,6 +17,7 @@ class Deal extends Model
     protected function casts(): array
     {
         return [
+            'custom_fields' => 'array',
             'amount' => 'decimal:2',
             'probability' => 'integer',
             'expected_close_date' => 'date',

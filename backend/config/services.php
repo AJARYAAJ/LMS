@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5'),
+    ],
+
+    // SMS / WhatsApp delivery. "log" records the message without sending; "twilio" sends for real.
+    'messaging' => [
+        'driver' => env('MESSAGING_DRIVER', 'log'),
+        'twilio_sid' => env('TWILIO_ACCOUNT_SID'),
+        'twilio_token' => env('TWILIO_AUTH_TOKEN'),
+        'twilio_from' => env('TWILIO_FROM'),
+        'twilio_whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+    ],
+
 ];

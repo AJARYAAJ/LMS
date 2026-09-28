@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Building2, Globe, Pencil, Phone, Plus, Search, Trash2, Users } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
-import { useAccountQuery, useAccountsQuery, useActivitiesQuery, useDeleteAccountMutation, useMetaQuery, useSaveAccountMutation } from '@/services/api'
+import { useAccountQuery, useAccountsQuery, useDeleteAccountMutation, useMetaQuery, useSaveAccountMutation } from '@/services/api'
 import { Avatar, Badge, Button, Card, ConfirmDialog, DescriptionList, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Pagination, Select, Textarea } from '@/components/ui'
-import { Timeline } from '@/components/crm/Timeline'
+import { CustomFieldInputs, RecordPanels, useCustomFieldRows } from '@/components/crm/RecordPanels'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { date, money } from '@/lib/format'
 import type { Account } from '@/types'
@@ -14,14 +14,15 @@ function AccountFormModal({ open, onClose, account }: { open: boolean; onClose: 
   const { data: meta } = useMetaQuery()
   const [save, { isLoading }] = useSaveAccountMutation()
   const [form, setForm] = useState<Record<string, string>>({})
+  const [custom, setCustom] = useState<Record<string, unknown>>({})
   const keys = ['name', 'domain', 'industry', 'company_size', 'phone', 'website', 'city', 'country', 'annual_revenue', 'owner_id', 'description'] as const
 
-  useEffect(() => { if (open) setForm(Object.fromEntries(keys.map((k) => [k, String(account?.[k] ?? '')]))) }, [open, account]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) { setForm(Object.fromEntries(keys.map((k) => [k, String(account?.[k] ?? '')]))); setCustom(account?.custom_fields ?? {}) } }, [open, account]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const submit = async () => {
     const body = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : k === 'owner_id' || k === 'annual_revenue' ? Number(v) : v]))
-    if (await run(save({ ...(account ? { id: account.id } : {}), ...body } as Partial<Account>), account ? 'Account updated' : 'Account created')) onClose()
+    if (await run(save({ ...(account ? { id: account.id } : {}), ...body, custom_fields: custom } as Partial<Account>), account ? 'Account updated' : 'Account created')) onClose()
   }
 
   return (
@@ -37,6 +38,7 @@ function AccountFormModal({ open, onClose, account }: { open: boolean; onClose: 
         <Field label="City"><Input value={form.city ?? ''} onChange={set('city')} /></Field>
         <Field label="Country"><Input value={form.country ?? ''} onChange={set('country')} /></Field>
         <Field label="Owner" className="sm:col-span-2"><Select value={form.owner_id ?? ''} onChange={set('owner_id')} placeholder="—">{meta?.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
+        <CustomFieldInputs entity="account" value={custom} onChange={setCustom} />
         <Field label="Description" className="sm:col-span-2"><Textarea value={form.description ?? ''} onChange={set('description')} /></Field>
       </div>
     </Modal>
@@ -92,7 +94,7 @@ export function AccountDetailPage() {
   const { write, manager } = usePermissions()
   const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
   const { data: a, isLoading } = useAccountQuery(id)
-  const { data: activities } = useActivitiesQuery({ type: 'accounts', id, per_page: 50 })
+  const customRows = useCustomFieldRows('account', a?.custom_fields)
   const [remove] = useDeleteAccountMutation()
   const [modal, setModal] = useState<null | 'edit' | 'activity' | 'delete'>(null)
 
@@ -141,11 +143,12 @@ export function AccountDetailPage() {
           <DescriptionList items={[
             { label: 'Company size', value: a.company_size }, { label: 'Annual revenue', value: a.annual_revenue && money(a.annual_revenue, currency) },
             { label: 'Location', value: [a.city, a.country].filter(Boolean).join(', ') }, { label: 'Owner', value: a.owner?.name }, { label: 'Created', value: date(a.created_at) },
+            ...customRows,
           ]} />
           {a.description && <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{a.description}</p>}
         </Card>
       </div>
-      <Card title="Timeline">{activities?.data.length ? <Timeline items={activities.data} /> : <EmptyState title="No activity yet" />}</Card>
+      <RecordPanels type="accounts" id={a.id} name={a.name} />
       <AccountFormModal open={modal === 'edit'} onClose={() => setModal(null)} account={a} />
       <ActivityModal open={modal === 'activity'} onClose={() => setModal(null)} subjectType="accounts" subjectId={a.id} />
       <ConfirmDialog open={modal === 'delete'} onClose={() => setModal(null)} title="Delete account?" onConfirm={async () => { if (await run(remove(a.id), 'Account deleted') !== undefined) navigate('/accounts') }} />

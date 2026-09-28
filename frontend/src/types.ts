@@ -221,6 +221,7 @@ export interface Task {
 
 export interface Account {
   id: number
+  custom_fields?: Record<string, unknown> | null
   name: string
   domain: string | null
   industry: string | null
@@ -243,6 +244,7 @@ export interface Account {
 
 export interface Contact {
   id: number
+  custom_fields?: Record<string, unknown> | null
   first_name: string
   last_name: string | null
   email: string | null
@@ -260,6 +262,7 @@ export interface Contact {
 
 export interface Deal {
   id: number
+  custom_fields?: Record<string, unknown> | null
   name: string
   account_id: number | null
   contact_id: number | null
@@ -399,6 +402,7 @@ export interface Meta {
   email_templates: Pick<EmailTemplate, 'id' | 'name' | 'category' | 'subject' | 'body'>[]
   sequences: Pick<Sequence, 'id' | 'name' | 'description' | 'steps'>[]
   qualification_criteria: { key: string; label: string }[]
+  features: { ai: boolean; messaging_driver: string }
   enums: {
     priorities: Priority[]
     ratings: Rating[]
@@ -494,4 +498,14 @@ export interface Insights {
   next_action: { title: string; type: string; reason: string }
   signals: { tone: 'positive' | 'warning' | 'negative'; text: string }[]
   qualification: { percent: number; missing: string[] }
+}
+
+export interface AiBrief {
+  summary: string
+  next_action_title: string
+  next_action_reason: string
+  talking_points: string[]
+  risk: string
+  model: string
+  generated_at: string
 }

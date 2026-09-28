@@ -73,6 +73,8 @@ Route::prefix('v1')->group(function () {
             Route::get('insights', [LeadWorkspaceController::class, 'insights']);
             Route::post('email', [LeadWorkspaceController::class, 'sendEmail']);
             Route::post('email/preview', [LeadWorkspaceController::class, 'previewEmail']);
+            Route::post('message', [LeadWorkspaceController::class, 'sendMessage']);
+            Route::post('ai-brief', [LeadWorkspaceController::class, 'aiBrief'])->middleware('throttle:30,1');
             Route::get('enrollments', [LeadWorkspaceController::class, 'enrollments']);
             Route::post('enrollments', [LeadWorkspaceController::class, 'enroll']);
         });

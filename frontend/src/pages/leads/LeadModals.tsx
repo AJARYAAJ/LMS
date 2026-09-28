@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
-import { ArrowRight, Building2, CalendarDays, Eye, GitMerge, Handshake, Search, Sparkles, User as UserIcon } from 'lucide-react'
-import { useAction, useAppSelector } from '@/app/hooks'
+import { AlertTriangle, ArrowRight, Building2, CalendarDays, Eye, GitMerge, Handshake, MessageCircle, MessageSquare, RefreshCw, Search, Sparkles, User as UserIcon, Wand2 } from 'lucide-react'
+import { useAction, useAppSelector, useToast } from '@/app/hooks'
 import {
   useAssignLeadMutation, useChangeLeadStatusMutation, useConvertLeadMutation, useEnrollMutation, useLeadsQuery, useMergeLeadMutation,
-  useMetaQuery, usePreviewEmailMutation, useSendEmailMutation,
+  errorMessage, useAiBriefMutation, useMetaQuery, usePreviewEmailMutation, useSendEmailMutation, useSendMessageMutation,
 } from '@/services/api'
 import { Avatar, Badge, Button, Field, Input, Modal, Select, Textarea, Toggle } from '@/components/ui'
 import { StatusBadge } from '@/components/crm/Badges'
-import { humanize, money } from '@/lib/format'
+import { ago, humanize, money } from '@/lib/format'
 import type { Lead, LeadStatus } from '@/types'
 
 export function EmailComposerModal({ lead, open, onClose, templateId }: { lead: Lead; open: boolean; onClose: () => void; templateId?: number | null }) {
@@ -292,5 +292,84 @@ export function EnrollModal({ lead, open, onClose }: { lead: Lead; open: boolean
         {!meta?.sequences.length && <p className="py-8 text-center text-sm text-slate-500">No active sequences. Create one in Playbooks.</p>}
       </div>
     </Modal>
+  )
+}
+
+export function MessageModal({ lead, open, onClose }: { lead: Lead; open: boolean; onClose: () => void }) {
+  const toast = useToast()
+  const { data: meta } = useMetaQuery()
+  const [send, { isLoading }] = useSendMessageMutation()
+  const [channel, setChannel] = useState<'sms' | 'whatsapp'>('whatsapp')
+  const [body, setBody] = useState('')
+  useEffect(() => { if (open) setBody('Hi {first_name}, ') }, [open])
+  const logOnly = meta?.features.messaging_driver !== 'twilio'
+
+  const submit = async () => {
+    try {
+      const r = await send({ id: lead.id, channel, body }).unwrap()
+      toast('success', r.message)
+      onClose()
+    } catch (e) { toast('error', errorMessage(e)) }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Send a message" description={<>To {lead.full_name} · {lead.phone}</>}
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit} disabled={!body.trim()} loading={isLoading}>Send {channel === 'sms' ? 'SMS' : 'WhatsApp'}</Button></>}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-2">
+          {([['whatsapp', 'WhatsApp', MessageCircle, '#22c55e'], ['sms', 'SMS', MessageSquare, '#0ea5e9']] as const).map(([v, l, Icon, c]) => (
+            <button key={v} type="button" onClick={() => setChannel(v)} className={clsx('flex items-center justify-center gap-2 rounded-2xl border p-3 text-sm font-medium transition', channel === v ? 'shadow-[0_8px_24px_-12px_var(--c)]' : 'border-slate-200 text-slate-500 dark:border-white/10')}
+              style={channel === v ? { borderColor: c, color: c, backgroundColor: `${c}14`, ['--c' as string]: c } : undefined}>
+              <Icon className="size-4" />{l}
+            </button>
+          ))}
+        </div>
+        <Field label="Message" hint={`${body.length} characters · merge fields like {first_name}, {company} are filled in`}>
+          <Textarea rows={5} value={body} onChange={(e) => setBody(e.target.value)} maxLength={1600} />
+        </Field>
+        {logOnly && (
+          <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" /> No SMS provider is configured, so the message is recorded on the timeline but not delivered. Set MESSAGING_DRIVER=twilio on the server to send for real.
+          </p>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+export function AiBriefPanel({ leadId }: { leadId: number }) {
+  const { data: meta } = useMetaQuery()
+  const [generate, { data, isLoading, error, reset }] = useAiBriefMutation()
+  useEffect(() => { reset() }, [leadId, reset])
+
+  if (!meta?.features.ai) {
+    return <p className="mt-4 flex items-center gap-1.5 text-[11px] text-slate-400"><Wand2 className="size-3.5" /> AI briefs turn on when an Anthropic API key is added to the server.</p>
+  }
+
+  if (!data) {
+    return (
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button size="sm" variant="subtle" icon={<Wand2 className="size-4" />} loading={isLoading} onClick={() => generate({ id: leadId })}>Generate AI brief</Button>
+        {error ? <span className="text-xs text-rose-600">{errorMessage(error)}</span> : <span className="text-xs text-slate-500">Claude reads the timeline, notes and qualification to coach your next step.</span>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-5 animate-fade-in rounded-2xl border border-fuchsia-200/70 bg-gradient-to-br from-fuchsia-50/70 via-white/40 to-cyan-50/60 p-4 dark:border-fuchsia-500/20 dark:from-fuchsia-500/10 dark:via-transparent dark:to-cyan-500/5">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.12em] text-fuchsia-600 uppercase dark:text-fuchsia-300"><Wand2 className="size-3.5" /> AI brief</p>
+        <button onClick={() => generate({ id: leadId, refresh: true })} className="flex items-center gap-1 text-xs text-slate-500 hover:text-brand-600" disabled={isLoading}>
+          <RefreshCw className={clsx('size-3.5', isLoading && 'animate-spin')} /> Regenerate
+        </button>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{data.summary}</p>
+      <p className="mt-3 text-sm"><span className="font-semibold text-slate-900 dark:text-white">Next: {data.next_action_title}.</span> <span className="text-slate-600 dark:text-slate-400">{data.next_action_reason}</span></p>
+      {!!data.talking_points.length && (
+        <ul className="mt-3 space-y-1">{data.talking_points.map((t, i) => <li key={i} className="flex gap-2 text-sm text-slate-700 dark:text-slate-300"><span className="text-fuchsia-500">•</span>{t}</li>)}</ul>
+      )}
+      {data.risk && <p className="mt-3 flex items-start gap-1.5 text-xs text-rose-600"><AlertTriangle className="mt-0.5 size-3.5 shrink-0" />{data.risk}</p>}
+      <p className="mt-3 text-[10px] text-slate-400">Generated by {data.model} · {ago(data.generated_at)} · AI can make mistakes; verify before acting.</p>
+    </div>
   )
 }

@@ -9,11 +9,13 @@ use App\Models\Sequence;
 use App\Models\SequenceEnrollment;
 use App\Models\User;
 use App\Services\ActivityRecorder;
+use App\Services\AiLeadAdvisor;
 use App\Services\AuditLogger;
 use App\Services\EmailComposer;
 use App\Services\LeadInsights;
 use App\Services\LeadMerger;
 use App\Services\LeadService;
+use App\Services\MessagingService;
 use App\Services\ScoringEngine;
 use App\Services\SequenceService;
 use App\Support\Rules;
@@ -142,6 +144,37 @@ class LeadWorkspaceController extends Controller
             'subject' => $composer->render($data['subject'] ?? '', $lead, $request->user()),
             'body' => $composer->render($data['body'] ?? '', $lead, $request->user()),
         ]]);
+    }
+
+    public function aiBrief(Request $request, int $id, AiLeadAdvisor $advisor): JsonResponse
+    {
+        $lead = Lead::visibleTo($request->user())->findOrFail($id);
+
+        if (! $advisor->enabled()) {
+            return response()->json(['message' => 'AI briefs are not enabled. Add ANTHROPIC_API_KEY to the server environment.', 'enabled' => false], 422);
+        }
+
+        try {
+            return response()->json(['data' => $advisor->brief($lead, $request->boolean('refresh'))]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 503);
+        }
+    }
+
+    public function sendMessage(Request $request, int $id, MessagingService $messaging): JsonResponse
+    {
+        $lead = Lead::visibleTo($request->user())->findOrFail($id);
+        $data = $request->validate([
+            'channel' => ['required', 'in:sms,whatsapp'],
+            'body' => ['required', 'string', 'max:1600'],
+        ]);
+
+        $result = $messaging->send($lead, $data['channel'], $data['body'], $request->user());
+
+        return response()->json([
+            'message' => $result['driver'] === 'log' ? 'Message logged (delivery provider not configured).' : "Message {$result['status']}.",
+            'data' => $result,
+        ]);
     }
 
     public function enrollments(Request $request, int $id): JsonResponse

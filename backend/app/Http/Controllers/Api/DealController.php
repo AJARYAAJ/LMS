@@ -103,6 +103,7 @@ class DealController extends ResourceController
             'probability' => ['sometimes', 'integer', 'between:0,100'],
             'expected_close_date' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:5000'],
+            'custom_fields' => ['nullable', 'array'],
         ];
     }
 }

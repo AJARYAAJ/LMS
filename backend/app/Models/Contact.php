@@ -10,10 +10,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['account_id', 'first_name', 'last_name', 'email', 'phone', 'job_title', 'owner_id', 'lead_id'])]
+#[Fillable(['account_id', 'first_name', 'last_name', 'email', 'phone', 'job_title', 'owner_id', 'lead_id', 'custom_fields'])]
 class Contact extends Model
 {
     use BelongsToOrganization, SoftDeletes;
+
+    protected function casts(): array
+    {
+        return ['custom_fields' => 'array'];
+    }
 
     public function account(): BelongsTo
     {
