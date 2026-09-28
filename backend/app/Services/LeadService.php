@@ -28,6 +28,7 @@ class LeadService
         private WebhookDispatcher $webhooks,
         private ActivityRecorder $activities,
         private AuditLogger $audit,
+        private LeadEnricher $enricher,
     ) {}
 
     public function create(array $data, ?User $actor, string $channel = 'manual'): Lead
@@ -56,6 +57,12 @@ class LeadService
                 'description' => 'Captured via '.str_replace('_', ' ', $channel),
                 'meta' => ['channel' => $channel],
             ]);
+
+            if ($enriched = $this->enricher->enrich($lead)) {
+                $this->activities->record($lead, 'system', 'Lead enriched', [
+                    'description' => collect($enriched)->map(fn ($v, $k) => str_replace('_', ' ', $k).": {$v}")->implode(' · '),
+                ]);
+            }
 
             $this->scoring->recalculate($lead);
 
@@ -118,6 +125,8 @@ class LeadService
             return $lead;
         }
 
+        $this->enforceBlueprint($lead, $status, $lostReason);
+
         DB::transaction(function () use ($lead, $status, $from, $actor, $note, $lostReason) {
             $lead->lead_status_id = $status->id;
 
@@ -177,6 +186,23 @@ class LeadService
         $this->afterEvent('lead.assigned', $lead);
 
         return $lead;
+    }
+
+    /**
+     * Blueprint: a lead may only enter a status once its required fields are known.
+     */
+    public function enforceBlueprint(Lead $lead, LeadStatus $status, ?string $lostReason = null): void
+    {
+        $missing = collect($status->required_fields ?? [])
+            ->filter(fn (string $field) => blank($field === 'lost_reason' ? ($lostReason ?? $lead->lost_reason) : $lead->{$field}))
+            ->values();
+
+        if ($missing->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'lead_status_id' => "Before moving to {$status->name}, fill in: ".$missing->map(fn ($f) => str_replace('_', ' ', $f))->implode(', ').'.',
+                'required_fields' => $missing->all(),
+            ]);
+        }
     }
 
     /**

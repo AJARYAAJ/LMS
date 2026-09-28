@@ -14,6 +14,23 @@ class Organization extends Model
         return ['settings' => 'array'];
     }
 
+    public const DEFAULT_QUALIFICATION = [
+        ['key' => 'budget', 'label' => 'Budget confirmed'],
+        ['key' => 'authority', 'label' => 'Decision maker identified'],
+        ['key' => 'need', 'label' => 'Clear business need'],
+        ['key' => 'timeline', 'label' => 'Purchase timeline agreed'],
+    ];
+
+    /**
+     * Qualification checklist (defaults to BANT), configurable per organization.
+     *
+     * @return list<array{key: string, label: string}>
+     */
+    public function qualificationCriteria(): array
+    {
+        return $this->settings['qualification_criteria'] ?? self::DEFAULT_QUALIFICATION;
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-#[Fillable(['organization_id', 'taskable_type', 'taskable_id', 'assigned_to', 'created_by', 'title', 'description', 'type', 'priority', 'due_at', 'reminder_at', 'reminded_at', 'completed_at'])]
+#[Fillable(['organization_id', 'taskable_type', 'taskable_id', 'sequence_enrollment_id', 'email_template_id', 'assigned_to', 'created_by', 'title', 'description', 'type', 'priority', 'due_at', 'reminder_at', 'reminded_at', 'completed_at'])]
 class Task extends Model
 {
     use BelongsToOrganization;

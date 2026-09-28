@@ -37,7 +37,9 @@ class LeadLifecycleTest extends TestCase
 
         $id = $response->json('data.id');
         $this->as($admin)->getJson("/api/v1/leads/{$id}/score")->assertOk()->assertJsonCount(4, 'data.events');
-        $this->as($admin)->getJson("/api/v1/leads/{$id}/activities")->assertOk()->assertJsonPath('data.0.title', 'Lead created');
+        $titles = $this->as($admin)->getJson("/api/v1/leads/{$id}/activities")->assertOk()->json('data.*.title');
+        $this->assertContains('Lead created', $titles);
+        $this->assertContains('Lead enriched', $titles); // website derived from the business email domain
         $this->as($admin)->getJson("/api/v1/leads/{$id}/history")->assertOk()->assertJsonCount(1, 'data');
     }
 
@@ -100,13 +102,13 @@ class LeadLifecycleTest extends TestCase
         $admin = $this->organization();
         $rep = $this->member($admin);
 
-        $lead = $this->as($admin)->postJson('/api/v1/leads', ['first_name' => 'Grace', 'company' => 'Navy', 'owner_id' => $rep->id])->json('data');
+        $lead = $this->as($admin)->postJson('/api/v1/leads', ['first_name' => 'Grace', 'email' => 'grace@navy.mil', 'company' => 'Navy', 'owner_id' => $rep->id])->json('data');
         $qualified = $this->inTenant($admin, fn () => LeadStatus::where('key', 'qualified')->first());
 
         $this->as($admin)->postJson("/api/v1/leads/{$lead['id']}/status", ['lead_status_id' => $qualified->id, 'note' => 'Budget confirmed'])
             ->assertOk()
             ->assertJsonPath('data.status.key', 'qualified')
-            ->assertJsonPath('data.score', 30); // company 10 + qualified 20
+            ->assertJsonPath('data.score', 50); // business email 20 + company 10 + qualified 20
 
         $task = $this->inTenant($admin, fn () => Task::first());
         $this->assertSame('Schedule discovery call with Grace', $task->title);

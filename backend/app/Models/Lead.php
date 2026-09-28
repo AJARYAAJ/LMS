@@ -113,6 +113,11 @@ class Lead extends Model
         return $this->hasMany(LeadStatusHistory::class);
     }
 
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(SequenceEnrollment::class);
+    }
+
     public function scoreEvents(): HasMany
     {
         return $this->hasMany(LeadScoreEvent::class);

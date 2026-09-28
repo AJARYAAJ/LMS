@@ -32,6 +32,8 @@ class LeadStatusController extends ResourceController
             'is_active' => ['sometimes', 'boolean'],
             'is_default' => ['sometimes', 'boolean'],
             'is_terminal' => ['sometimes', 'boolean'],
+            'required_fields' => ['nullable', 'array'],
+            'required_fields.*' => [Rule::in([...Lead::CONDITION_FIELDS, 'first_name', 'last_name', 'lost_reason', 'next_follow_up_at'])],
         ];
     }
 

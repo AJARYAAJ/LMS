@@ -6,14 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\AutomationRule;
 use App\Models\Campaign;
 use App\Models\CustomField;
+use App\Models\EmailTemplate;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\PipelineStage;
+use App\Models\Sequence;
 use App\Models\Tag;
+use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\WebForm;
 use App\Services\ConditionEvaluator;
+use App\Services\EmailComposer;
 use App\Services\WebhookDispatcher;
 use Illuminate\Http\JsonResponse;
 
@@ -33,16 +38,22 @@ class MetaController extends Controller
             'users' => User::where('is_active', true)->orderBy('name')->get(['id', 'name', 'email', 'role', 'avatar_color']),
             'stages' => PipelineStage::orderBy('display_order')->get(),
             'custom_fields' => CustomField::orderBy('display_order')->get(),
+            'email_templates' => EmailTemplate::orderBy('name')->get(['id', 'name', 'category', 'subject', 'body']),
+            'sequences' => Sequence::where('is_active', true)->orderBy('name')->get(['id', 'name', 'description', 'steps']),
+            'qualification_criteria' => request()->user()->organization->qualificationCriteria(),
             'enums' => [
                 'priorities' => Lead::PRIORITIES,
                 'ratings' => Lead::RATINGS,
                 'roles' => User::ROLES,
                 'status_categories' => LeadStatus::CATEGORIES,
                 'operators' => ConditionEvaluator::OPERATORS,
-                'condition_fields' => [...Lead::CONDITION_FIELDS, 'status_key', 'status_category', 'source_key', 'tags'],
+                'condition_fields' => [...Lead::CONDITION_FIELDS, 'status_key', 'status_category', 'source_key', 'tags', 'qualification_percent'],
                 'automation_triggers' => AutomationRule::TRIGGERS,
                 'automation_actions' => AutomationRule::ACTIONS,
                 'webhook_events' => WebhookDispatcher::EVENTS,
+                'merge_fields' => EmailComposer::MERGE_FIELDS,
+                'form_field_keys' => WebForm::FIELD_KEYS,
+                'task_types' => Task::TYPES,
             ],
         ]]);
     }

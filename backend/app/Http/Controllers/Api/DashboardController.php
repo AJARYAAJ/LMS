@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Activity;
 use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadSource;
@@ -68,6 +69,7 @@ class DashboardController extends Controller
                 ->filter(fn ($s) => $s['count'] > 0)->values(),
             'by_rating' => collect(Lead::RATINGS)->map(fn ($r) => ['rating' => $r, 'count' => $leads()->where('rating', $r)->whereNull('converted_at')->count()]),
             'trend' => $this->trend($user, 30),
+            'heatmap' => $this->heatmap($user),
             'upcoming_tasks' => Task::with('taskable')
                 ->where('assigned_to', $user->id)->whereNull('completed_at')
                 ->orderByRaw('case when due_at is null then 1 else 0 end')->orderBy('due_at')->limit(6)->get()
@@ -76,6 +78,26 @@ class DashboardController extends Controller
             'hot_leads' => $leads()->whereNull('converted_at')->with(['status:id,name,color', 'owner:id,name,avatar_color'])
                 ->orderByDesc('score')->limit(5)->get(['id', 'first_name', 'last_name', 'company', 'score', 'rating', 'expected_value', 'lead_status_id', 'owner_id']),
         ]]);
+    }
+
+    /**
+     * Non-system activity counts per day for the last 12 weeks.
+     */
+    private function heatmap(User $user): array
+    {
+        $from = now()->subWeeks(12)->startOfWeek();
+        $counts = Activity::where('type', '!=', 'system')
+            ->where('occurred_at', '>=', $from)
+            ->when($user->role === User::SALES_REP, fn ($q) => $q->where('user_id', $user->id))
+            ->pluck('occurred_at')
+            ->countBy(fn (Carbon $d) => $d->toDateString());
+
+        $days = [];
+        for ($d = $from->copy(); $d->lte(now()); $d->addDay()) {
+            $days[] = ['date' => $d->toDateString(), 'count' => $counts[$d->toDateString()] ?? 0];
+        }
+
+        return $days;
     }
 
     private function trend(User $user, int $days): array

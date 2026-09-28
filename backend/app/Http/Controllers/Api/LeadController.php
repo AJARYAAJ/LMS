@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LeadController extends Controller
@@ -220,19 +221,35 @@ class LeadController extends Controller
         }
 
         $leads = Lead::visibleTo($user)->whereIn('id', $data['ids'])->get();
+        $skipped = 0;
 
         foreach ($leads as $lead) {
-            match ($data['action']) {
-                'assign' => $this->leads->assign($lead, $data['owner_id'] ?? null, $user),
-                'status' => $this->leads->changeStatus($lead, $data['lead_status_id'], $user, 'Bulk update'),
-                'tag' => $lead->tags()->syncWithoutDetaching([$data['tag_id']]),
-                'untag' => $lead->tags()->detach($data['tag_id']),
-                'priority' => $this->leads->update($lead, ['priority' => $data['priority']], $user),
-                'delete' => $this->leads->delete($lead),
-            };
+            try {
+                $this->bulkOne($lead, $data, $user);
+            } catch (ValidationException) {
+                $skipped++;
+            }
         }
 
-        return response()->json(['message' => "Updated {$leads->count()} leads.", 'count' => $leads->count()]);
+        $done = $leads->count() - $skipped;
+
+        return response()->json([
+            'message' => "Updated {$done} leads.".($skipped ? " {$skipped} skipped (missing required fields)." : ''),
+            'count' => $done,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    private function bulkOne(Lead $lead, array $data, User $user): void
+    {
+        match ($data['action']) {
+            'assign' => $this->leads->assign($lead, $data['owner_id'] ?? null, $user),
+            'status' => $this->leads->changeStatus($lead, $data['lead_status_id'], $user, 'Bulk update'),
+            'tag' => $lead->tags()->syncWithoutDetaching([$data['tag_id']]),
+            'untag' => $lead->tags()->detach($data['tag_id']),
+            'priority' => $this->leads->update($lead, ['priority' => $data['priority']], $user),
+            'delete' => $this->leads->delete($lead),
+        };
     }
 
     public function export(Request $request): StreamedResponse

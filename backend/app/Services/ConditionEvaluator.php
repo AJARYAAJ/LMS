@@ -88,6 +88,19 @@ class ConditionEvaluator
             'status_category' => $lead->status?->category,
             'source_key' => $lead->source?->key,
             'tags' => $lead->tags->pluck('name')->all(),
+            'qualification_percent' => $this->qualificationPercent($lead),
         ]);
+    }
+
+    private function qualificationPercent(Lead $lead): int
+    {
+        $criteria = $lead->organization?->qualificationCriteria() ?? [];
+        if (! $criteria) {
+            return 0;
+        }
+        $answers = $lead->qualification ?? [];
+        $done = collect($criteria)->filter(fn ($c) => ! empty($answers[$c['key']]))->count();
+
+        return (int) round($done / count($criteria) * 100);
     }
 }

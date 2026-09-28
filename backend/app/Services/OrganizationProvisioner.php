@@ -3,13 +3,16 @@
 namespace App\Services;
 
 use App\Models\AutomationRule;
+use App\Models\EmailTemplate;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\Organization;
 use App\Models\PipelineStage;
 use App\Models\ScoringRule;
+use App\Models\Sequence;
 use App\Models\Tag;
 use App\Models\User;
+use App\Models\WebForm;
 use App\Support\Tenant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,6 +32,12 @@ class OrganizationProvisioner
         ['Converted', 'converted', 'converted', '#059669', false, true],
         ['Not Interested', 'not_interested', 'lost', '#94a3b8', false, true],
         ['Lost', 'lost', 'lost', '#ef4444', false, true],
+    ];
+
+    public const BLUEPRINT = [
+        'qualified' => ['email', 'company'],
+        'lost' => ['lost_reason'],
+        'not_interested' => ['lost_reason'],
     ];
 
     public const DEFAULT_SOURCES = [
@@ -63,6 +72,7 @@ class OrganizationProvisioner
                 'industry' => $org['industry'] ?? null,
                 'currency' => $org['currency'] ?? 'USD',
                 'timezone' => $org['timezone'] ?? 'UTC',
+                'settings' => ['qualification_criteria' => Organization::DEFAULT_QUALIFICATION],
             ]);
 
             return Tenant::run($organization->id, function () use ($organization, $owner) {
@@ -85,6 +95,8 @@ class OrganizationProvisioner
             LeadStatus::create([
                 'organization_id' => $organization->id, 'name' => $name, 'key' => $key, 'category' => $category,
                 'color' => $color, 'display_order' => $i, 'is_default' => $default, 'is_terminal' => $terminal,
+                // Blueprint: what must be known before a lead may enter this stage.
+                'required_fields' => self::BLUEPRINT[$key] ?? null,
             ]);
         }
 
@@ -110,6 +122,8 @@ class OrganizationProvisioner
             Tag::create(['organization_id' => $organization->id, 'name' => $name, 'color' => $color]);
         }
 
+        $this->seedPlaybooks($organization);
+
         AutomationRule::create([
             'organization_id' => $organization->id,
             'name' => 'Qualified lead follow-up',
@@ -134,5 +148,69 @@ class OrganizationProvisioner
         }
 
         return $slug;
+    }
+
+    private function seedPlaybooks(Organization $organization): void
+    {
+        $intro = EmailTemplate::create([
+            'organization_id' => $organization->id,
+            'name' => 'Intro — thanks for reaching out',
+            'category' => 'outreach',
+            'subject' => 'Great to meet you, {first_name}',
+            'body' => "Hi {first_name},\n\nThanks for your interest in {organization.name}. I'd love to learn more about what {company} is looking for.\n\nWould you have 20 minutes this week for a quick call?\n\nBest,\n{sender.name}",
+        ]);
+        $followUp = EmailTemplate::create([
+            'organization_id' => $organization->id,
+            'name' => 'Follow-up — checking in',
+            'category' => 'follow_up',
+            'subject' => 'Quick follow-up, {first_name}',
+            'body' => "Hi {first_name},\n\nJust checking in on my last note. Happy to share a short demo tailored to {company} whenever suits you.\n\nBest,\n{sender.name}",
+        ]);
+        EmailTemplate::create([
+            'organization_id' => $organization->id,
+            'name' => 'Proposal sent',
+            'category' => 'proposal',
+            'subject' => 'Your proposal from {organization.name}',
+            'body' => "Hi {first_name},\n\nAs promised, here is the proposal we discussed. Let me know if you have any questions — I'm glad to walk your team through it.\n\nBest,\n{sender.name}",
+        ]);
+
+        Sequence::create([
+            'organization_id' => $organization->id,
+            'name' => 'New inbound lead — 7 day cadence',
+            'description' => 'Call, email and follow up within the first week.',
+            'steps' => [
+                ['day_offset' => 0, 'type' => 'call', 'title' => 'Intro call'],
+                ['day_offset' => 0, 'type' => 'email', 'title' => 'Send intro email', 'email_template_id' => $intro->id],
+                ['day_offset' => 2, 'type' => 'call', 'title' => 'Second call attempt'],
+                ['day_offset' => 4, 'type' => 'email', 'title' => 'Follow-up email', 'email_template_id' => $followUp->id],
+                ['day_offset' => 7, 'type' => 'follow_up', 'title' => 'Decide: qualify or nurture'],
+            ],
+        ]);
+        Sequence::create([
+            'organization_id' => $organization->id,
+            'name' => 'Nurture — monthly check-in',
+            'description' => 'Keep cold or lost leads warm.',
+            'steps' => [
+                ['day_offset' => 14, 'type' => 'email', 'title' => 'Share a case study', 'email_template_id' => $followUp->id],
+                ['day_offset' => 45, 'type' => 'email', 'title' => 'Product update email'],
+                ['day_offset' => 90, 'type' => 'call', 'title' => 'Re-qualification call'],
+            ],
+        ]);
+
+        WebForm::create([
+            'organization_id' => $organization->id,
+            'name' => 'Website — Contact sales',
+            'slug' => Str::slug($organization->slug.'-contact-sales'),
+            'title' => 'Talk to our team',
+            'description' => 'Tell us a little about you and we will reach out within one business day.',
+            'fields' => [
+                ['key' => 'name', 'label' => 'Full name', 'type' => 'text', 'required' => true],
+                ['key' => 'email', 'label' => 'Work email', 'type' => 'email', 'required' => true],
+                ['key' => 'company', 'label' => 'Company', 'type' => 'text', 'required' => false],
+                ['key' => 'phone', 'label' => 'Phone', 'type' => 'tel', 'required' => false],
+                ['key' => 'requirements', 'label' => 'How can we help?', 'type' => 'textarea', 'required' => false],
+            ],
+            'lead_source_id' => LeadSource::where('organization_id', $organization->id)->where('key', 'website')->value('id'),
+        ]);
     }
 }

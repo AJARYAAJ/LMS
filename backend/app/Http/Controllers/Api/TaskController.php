@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lead;
+use App\Models\SequenceEnrollment;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\ActivityRecorder;
+use App\Services\SequenceService;
 use App\Support\Rules;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -28,6 +30,8 @@ class TaskController extends Controller
             ->when($request->query('type'), fn ($q, $v) => $q->where('type', $v))
             ->when($request->query('priority'), fn ($q, $v) => $q->where('priority', $v))
             ->when($request->query('search'), fn ($q, $v) => $q->whereLike('title', "%{$v}%"))
+            ->when($request->query('from'), fn ($q, $v) => $q->where('due_at', '>=', $v))
+            ->when($request->query('to'), fn ($q, $v) => $q->where('due_at', '<=', $v))
             ->tap(fn (Builder $q) => $this->applyView($q, $request->query('view', 'open')))
             ->orderByRaw('case when due_at is null then 1 else 0 end')
             ->orderBy('due_at')
@@ -83,13 +87,16 @@ class TaskController extends Controller
         return response()->json(['data' => $this->present($task->load(['assignee:id,name,avatar_color', 'taskable']))]);
     }
 
-    public function toggle(Request $request, int $id, ActivityRecorder $activities): JsonResponse
+    public function toggle(Request $request, int $id, ActivityRecorder $activities, SequenceService $sequences): JsonResponse
     {
         $task = $this->scoped($request)->findOrFail($id);
         $task->update(['completed_at' => $task->completed_at ? null : now()]);
 
         if ($task->completed_at && $task->taskable) {
             $activities->record($task->taskable, 'task', "Task completed: {$task->title}", ['meta' => ['task_id' => $task->id]]);
+        }
+        if ($task->sequence_enrollment_id && ($enrollment = SequenceEnrollment::find($task->sequence_enrollment_id))) {
+            $sequences->refresh($enrollment);
         }
 
         return response()->json(['data' => $this->present($task->load(['assignee:id,name,avatar_color', 'taskable']))]);

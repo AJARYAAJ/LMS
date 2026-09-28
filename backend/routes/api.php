@@ -10,9 +10,11 @@ use App\Http\Controllers\Api\DealController;
 use App\Http\Controllers\Api\LeadCaptureController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\LeadImportController;
+use App\Http\Controllers\Api\LeadWorkspaceController;
 use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PublicFormController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SavedViewController;
 use App\Http\Controllers\Api\SearchController;
@@ -26,6 +28,10 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/register', [AuthController::class, 'register']);
         Route::post('auth/login', [AuthController::class, 'login']);
     });
+
+    // Hosted web-to-lead forms (public, by slug)
+    Route::get('forms/{slug}', [PublicFormController::class, 'show']);
+    Route::post('forms/{slug}', [PublicFormController::class, 'submit'])->middleware('throttle:capture');
 
     // Web forms / external systems (organization API key)
     Route::post('capture/leads', LeadCaptureController::class)->middleware(['api.key', 'throttle:capture']);
@@ -49,6 +55,10 @@ Route::prefix('v1')->group(function () {
         Route::get('leads/import/template', [LeadImportController::class, 'template']);
         Route::post('leads/import', [LeadImportController::class, 'store']);
         Route::post('leads/bulk', [LeadController::class, 'bulk']);
+        Route::get('leads/queue', [LeadWorkspaceController::class, 'queue']);
+        Route::get('leads/trash', [LeadWorkspaceController::class, 'trash']);
+        Route::post('leads/trash/{id}/restore', [LeadWorkspaceController::class, 'restore'])->whereNumber('id');
+        Route::delete('enrollments/{id}', [LeadWorkspaceController::class, 'stopEnrollment'])->whereNumber('id');
         Route::apiResource('leads', LeadController::class)->parameters(['leads' => 'id'])->whereNumber('id');
         Route::whereNumber('id')->prefix('leads/{id}')->group(function () {
             Route::post('status', [LeadController::class, 'changeStatus']);
@@ -57,6 +67,14 @@ Route::prefix('v1')->group(function () {
             Route::get('score', [LeadController::class, 'score']);
             Route::post('score', [LeadController::class, 'adjustScore']);
             Route::get('history', [LeadController::class, 'history']);
+            Route::post('claim', [LeadWorkspaceController::class, 'claim']);
+            Route::post('merge', [LeadWorkspaceController::class, 'merge']);
+            Route::put('qualification', [LeadWorkspaceController::class, 'qualification']);
+            Route::get('insights', [LeadWorkspaceController::class, 'insights']);
+            Route::post('email', [LeadWorkspaceController::class, 'sendEmail']);
+            Route::post('email/preview', [LeadWorkspaceController::class, 'previewEmail']);
+            Route::get('enrollments', [LeadWorkspaceController::class, 'enrollments']);
+            Route::post('enrollments', [LeadWorkspaceController::class, 'enroll']);
         });
 
         // Timeline & notes for any CRM record
@@ -94,9 +112,13 @@ Route::prefix('v1')->group(function () {
         Route::get('settings/campaigns', [Settings\CampaignController::class, 'index']);
         Route::get('settings/teams', [Settings\TeamController::class, 'index']);
         Route::get('settings/users', [Settings\UserController::class, 'index']);
+        Route::get('settings/email-templates', [Settings\EmailTemplateController::class, 'index']);
+        Route::get('settings/sequences', [Settings\SequenceController::class, 'index']);
 
         Route::middleware('role:admin,manager')->group(function () {
             Route::apiResource('settings/campaigns', Settings\CampaignController::class)->except('index')->parameters(['campaigns' => 'id'])->whereNumber('id');
+            Route::apiResource('settings/email-templates', Settings\EmailTemplateController::class)->except('index')->parameters(['email-templates' => 'id'])->whereNumber('id');
+            Route::apiResource('settings/sequences', Settings\SequenceController::class)->except('index')->parameters(['sequences' => 'id'])->whereNumber('id');
             Route::get('audit-logs', [AuditLogController::class, 'index']);
         });
 
@@ -119,6 +141,7 @@ Route::prefix('v1')->group(function () {
                 'scoring-rules' => Settings\ScoringRuleController::class,
                 'automation-rules' => Settings\AutomationRuleController::class,
                 'webhooks' => Settings\WebhookController::class,
+                'web-forms' => Settings\WebFormController::class,
             ] as $uri => $controller) {
                 Route::apiResource($uri, $controller)->parameters([$uri => 'id'])->whereNumber('id');
             }
