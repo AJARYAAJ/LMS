@@ -6,7 +6,6 @@ use App\Models\EmailTemplate;
 use App\Models\Lead;
 use App\Models\User;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -20,7 +19,7 @@ class EmailComposer
         '{owner.name}', '{owner.email}', '{sender.name}', '{organization.name}',
     ];
 
-    public function __construct(private ActivityRecorder $activities) {}
+    public function __construct(private ActivityRecorder $activities, private OrgMailer $mailer) {}
 
     public function render(string $text, Lead $lead, ?User $sender): string
     {
@@ -50,18 +49,13 @@ class EmailComposer
         $subject = $this->render($subject, $lead, $sender);
         $body = $this->render($body, $lead, $sender);
 
-        Mail::raw($body, function ($message) use ($lead, $subject, $sender) {
-            $message->to($lead->email, $lead->full_name)->subject($subject);
-            if ($sender) {
-                $message->replyTo($sender->email, $sender->name);
-            }
-        });
+        $provider = $this->mailer->send($lead->organization_id, $lead->email, $lead->full_name, $subject, $body, $sender ? [$sender->email, $sender->name] : null);
 
         $this->activities->record($lead, 'email', $subject, [
             'description' => $body,
             'direction' => 'outbound',
             'outcome' => 'Sent',
-            'meta' => array_filter(['template_id' => $template?->id]),
+            'meta' => array_filter(['template_id' => $template?->id, 'provider' => $provider]),
         ]);
 
         $lead->forceFill(['last_contacted_at' => now()])->saveQuietly();

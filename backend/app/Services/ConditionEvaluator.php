@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Call;
 use App\Models\Lead;
 use Illuminate\Support\Str;
 
@@ -89,6 +90,7 @@ class ConditionEvaluator
             'source_key' => $lead->source?->key,
             'tags' => $lead->tags->pluck('name')->all(),
             'qualification_percent' => $this->qualificationPercent($lead),
+            'last_call_outcome' => Call::where('lead_id', $lead->id)->whereNotNull('outcome')->latest('id')->value('outcome'),
         ]);
     }
 

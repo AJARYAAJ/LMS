@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
 import type {
-  Account, Activity, AiBrief, ApiKey, LayoutEntity, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
+  Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
   ScoringRule, SearchResult, Tag, Task, Team, User, Webhook,
 } from '@/types'
@@ -34,7 +34,7 @@ const clean = (params?: Query) =>
 /** A settings resource with standard list/create/update/delete endpoints. */
 type SettingsTag =
   | 'LeadStatus' | 'LeadSource' | 'PipelineStage' | 'Tag' | 'CustomField' | 'Team' | 'AssignmentRule'
-  | 'ScoringRule' | 'AutomationRule' | 'Webhook' | 'Campaign' | 'User' | 'EmailTemplate' | 'Sequence' | 'WebForm'
+  | 'ScoringRule' | 'AutomationRule' | 'Webhook' | 'Campaign' | 'User' | 'EmailTemplate' | 'Sequence' | 'WebForm' | 'AiAgent'
 
 export interface DashboardData {
   kpis: {
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -447,6 +447,69 @@ export const api = createApi({
       query: (entity) => ({ url: `settings/layouts/${entity}`, method: 'DELETE' }),
       invalidatesTags: ['Layout', 'Meta'],
     }),
+    integrations: b.query<{ categories: Record<string, string>; providers: IntegrationProvider[] }, void>({
+      query: () => 'settings/integrations',
+      transformResponse: (r: { data: never }) => r.data,
+      providesTags: ['Integration'],
+    }),
+    saveIntegration: b.mutation<void, { provider: string; config: Record<string, string>; is_active?: boolean }>({
+      query: (body) => ({ url: 'settings/integrations', method: 'POST', body }),
+      invalidatesTags: ['Integration', 'Meta', 'AiAgent'],
+    }),
+    toggleIntegration: b.mutation<void, { id: number; is_active: boolean }>({
+      query: ({ id, ...body }) => ({ url: `settings/integrations/${id}`, method: 'PATCH', body }),
+      invalidatesTags: ['Integration', 'Meta'],
+    }),
+    deleteIntegration: b.mutation<void, number>({
+      query: (id) => ({ url: `settings/integrations/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Integration', 'Meta', 'AiAgent'],
+    }),
+    testIntegration: b.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `settings/integrations/${id}/test`, method: 'POST' }),
+      invalidatesTags: ['Integration'],
+    }),
+    calls: b.query<Paginated<Call>, Query>({
+      query: (params) => ({ url: 'calls', params: clean(params) }),
+      providesTags: ['Call'],
+    }),
+    call: b.query<Call, number>({
+      query: (id) => `calls/${id}`,
+      transformResponse: (r: { data: Call }) => r.data,
+      providesTags: (_r, _e, id) => [{ type: 'Call', id }],
+    }),
+    callStats: b.query<CallStats, number | void>({
+      query: (days) => ({ url: 'calls/stats', params: { days: days ?? 30 } }),
+      transformResponse: (r: { data: CallStats }) => r.data,
+      providesTags: ['Call'],
+    }),
+    callLead: b.mutation<Call, { leadId: number; ai_agent_id: number }>({
+      query: ({ leadId, ...body }) => ({ url: `leads/${leadId}/calls`, method: 'POST', body }),
+      transformResponse: (r: { data: Call }) => r.data,
+      invalidatesTags: ['Call'],
+    }),
+    launchCampaign: b.mutation<{ campaign_key: string; queued: number; skipped: number }, { agentId: number; conditions?: Condition[]; lead_ids?: number[]; limit?: number }>({
+      query: ({ agentId, ...body }) => ({ url: `ai-agents/${agentId}/campaign`, method: 'POST', body }),
+      transformResponse: (r: { data: never }) => r.data,
+      invalidatesTags: ['Call'],
+    }),
+    cancelCall: b.mutation<void, number>({
+      query: (id) => ({ url: `calls/${id}/cancel`, method: 'POST' }),
+      invalidatesTags: ['Call'],
+    }),
+    notificationPrefs: b.query<NotificationPrefs, void>({
+      query: () => 'auth/notification-preferences',
+      transformResponse: (r: { data: NotificationPrefs }) => r.data,
+      providesTags: ['NotificationPrefs'],
+    }),
+    updateNotificationPrefs: b.mutation<NotificationPrefs, Record<string, unknown>>({
+      query: (body) => ({ url: 'auth/notification-preferences', method: 'PUT', body }),
+      transformResponse: (r: { data: NotificationPrefs }) => r.data,
+      invalidatesTags: ['NotificationPrefs'],
+    }),
+    testNotification: b.mutation<{ message: string }, void>({
+      query: () => ({ url: 'notifications/test', method: 'POST' }),
+      invalidatesTags: ['Notification'],
+    }),
     automationExecutions: b.query<{ id: number; status: string; message: string | null; created_at: string; lead: { id: number; first_name: string; last_name: string | null } | null }[], number>({
       query: (id) => `settings/automation-rules/${id}/executions`,
       transformResponse: (r: { data: never }) => r.data,
@@ -484,6 +547,9 @@ export const {
   useApiKeysQuery, useCreateApiKeyMutation, useRevokeApiKeyMutation,
   useLeadQueueQuery, useClaimLeadMutation, useMergeLeadMutation, useTrashQuery, useRestoreLeadMutation,
   useUpdateQualificationMutation, useInsightsQuery, useSendEmailMutation, usePreviewEmailMutation,
+  useIntegrationsQuery, useSaveIntegrationMutation, useToggleIntegrationMutation, useDeleteIntegrationMutation, useTestIntegrationMutation,
+  useCallsQuery, useCallQuery, useCallStatsQuery, useCallLeadMutation, useLaunchCampaignMutation, useCancelCallMutation,
+  useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
 
@@ -505,6 +571,7 @@ export const resources = {
   emailTemplates: { resource: 'email-templates', tag: 'EmailTemplate' } as SettingsResource<EmailTemplate>,
   sequences: { resource: 'sequences', tag: 'Sequence' } as SettingsResource<Sequence>,
   webForms: { resource: 'web-forms', tag: 'WebForm' } as SettingsResource<WebForm>,
+  aiAgents: { resource: 'ai-agents', tag: 'AiAgent' } as SettingsResource<AiAgent>,
 }
 
 /** Typed wrapper around the generic settings list query. */

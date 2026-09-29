@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AiAgent;
 use App\Models\AutomationRule;
 use App\Models\EmailTemplate;
+use App\Models\Integration;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\Organization;
@@ -123,6 +125,7 @@ class OrganizationProvisioner
         }
 
         $this->seedPlaybooks($organization);
+        $this->seedCalling($organization);
 
         AutomationRule::create([
             'organization_id' => $organization->id,
@@ -211,6 +214,30 @@ class OrganizationProvisioner
                 ['key' => 'requirements', 'label' => 'How can we help?', 'type' => 'textarea', 'required' => false],
             ],
             'lead_source_id' => LeadSource::where('organization_id', $organization->id)->where('key', 'website')->value('id'),
+        ]);
+    }
+
+    /** Call simulator + a ready-to-use AI qualifier agent, so AI calling works out of the box. */
+    private function seedCalling(Organization $organization): void
+    {
+        $simulator = Integration::create([
+            'organization_id' => $organization->id, 'category' => 'voice', 'provider' => 'simulator', 'config' => [],
+        ]);
+
+        AiAgent::create([
+            'organization_id' => $organization->id,
+            'name' => 'Ava — inbound qualifier',
+            'integration_id' => $simulator->id,
+            'goal' => 'Qualify new inbound leads (budget, authority, need, timeline) and book a 30-minute demo with a specialist.',
+            'first_message' => 'Hi {first_name}, this is Ava from {organization} — you recently showed interest in what we do. Do you have two minutes?',
+            'voice' => 'ava',
+            'questions' => [
+                ['key' => 'need', 'question' => 'What prompted you to look for a solution right now?'],
+                ['key' => 'budget', 'question' => 'Have you set aside a budget for this?'],
+                ['key' => 'authority', 'question' => 'Who else is involved in making the decision?'],
+                ['key' => 'timeline', 'question' => 'When would you ideally like to have something in place?'],
+            ],
+            'max_duration_seconds' => 300,
         ]);
     }
 }

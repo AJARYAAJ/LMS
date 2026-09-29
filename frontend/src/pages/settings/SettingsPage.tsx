@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  Building, Cable, LayoutTemplate, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, ListChecks, Pencil, Plus, Recycle, Route, Settings,
+  Building, Cable, LayoutTemplate, PlugZap, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, ListChecks, Pencil, Plus, Recycle, Route, Settings,
   Shield, Tag as TagIcon, Trash2, Users, Workflow, Zap,
 } from 'lucide-react'
 import { useAction, useCurrentUser } from '@/app/hooks'
@@ -17,6 +17,7 @@ import type { CustomField, LeadSource, LeadStatus, PipelineStage, Tag, Team, Use
 import { SectionHeader } from '@/components/crm/ConditionBuilder'
 import { AssignmentRules, Automations, Integrations, ScoringRules, WebForms } from './RuleSections'
 import { LayoutEditor } from './LayoutEditor'
+import { IntegrationsHub } from './IntegrationsHub'
 
 const sections = [
   { key: 'organization', label: 'Organization', icon: Building, group: 'Workspace' },
@@ -32,8 +33,9 @@ const sections = [
   { key: 'assignment', label: 'Assignment rules', icon: Zap, group: 'Automation' },
   { key: 'scoring', label: 'Lead scoring', icon: Calculator, group: 'Automation' },
   { key: 'automations', label: 'Workflows', icon: Workflow, group: 'Automation' },
-  { key: 'forms', label: 'Web forms', icon: FileInput, group: 'Capture' },
-  { key: 'integrations', label: 'API & webhooks', icon: Cable, group: 'Capture' },
+  { key: 'integrations-hub', label: 'Integrations', icon: PlugZap, group: 'Connect' },
+  { key: 'forms', label: 'Web forms', icon: FileInput, group: 'Connect' },
+  { key: 'integrations', label: 'API & webhooks', icon: Cable, group: 'Connect' },
 ]
 
 export function SettingsPage() {
@@ -72,6 +74,7 @@ export function SettingsPage() {
           {active === 'assignment' && <AssignmentRules />}
           {active === 'scoring' && <ScoringRules />}
           {active === 'automations' && <Automations />}
+          {active === 'integrations-hub' && <IntegrationsHub />}
           {active === 'forms' && <WebForms />}
           {active === 'integrations' && <Integrations />}
         </div>

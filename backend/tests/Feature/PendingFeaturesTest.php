@@ -88,4 +88,11 @@ class PendingFeaturesTest extends TestCase
         $this->as($admin)->postJson('/api/v1/tasks', ['title' => 'Send contract', 'taskable_type' => 'deal', 'taskable_id' => $deal])->assertCreated();
         $this->as($admin)->getJson("/api/v1/tasks?taskable_type=deal&taskable_id={$deal}&view=all")->assertJsonPath('total', 1);
     }
+
+    public function test_duplicate_detection_ignores_phone_formatting(): void
+    {
+        $admin = $this->organization();
+        $this->as($admin)->postJson('/api/v1/leads', ['first_name' => 'A', 'phone' => '+91 98765 43210'])->assertCreated();
+        $this->as($admin)->postJson('/api/v1/leads', ['first_name' => 'B', 'phone' => '9876543210'])->assertStatus(409);
+    }
 }

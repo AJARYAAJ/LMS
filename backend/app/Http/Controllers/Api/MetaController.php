@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Integrations\IntegrationManager;
 use App\Models\AutomationRule;
 use App\Models\Campaign;
 use App\Models\CustomField;
@@ -17,10 +18,13 @@ use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\WebForm;
+use App\Services\AiLeadAdvisor;
 use App\Services\ConditionEvaluator;
 use App\Services\EmailComposer;
+use App\Services\MessagingService;
 use App\Services\WebhookDispatcher;
 use App\Support\PageLayouts;
+use App\Support\Tenant;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -44,8 +48,10 @@ class MetaController extends Controller
             'qualification_criteria' => request()->user()->organization->qualificationCriteria(),
             'layouts' => PageLayouts::all(request()->user()->organization),
             'features' => [
-                'ai' => filled(config('services.anthropic.key')),
-                'messaging_driver' => config('services.messaging.driver', 'log'),
+                'ai' => app(AiLeadAdvisor::class)->enabled(),
+                'messaging_driver' => app(MessagingService::class)->driver(Tenant::id()),
+                'voice' => app(IntegrationManager::class)->active(Tenant::id(), 'voice')?->provider,
+                'email_provider' => app(IntegrationManager::class)->active(Tenant::id(), 'email')?->provider ?? 'default',
             ],
             'enums' => [
                 'priorities' => Lead::PRIORITIES,
@@ -53,7 +59,7 @@ class MetaController extends Controller
                 'roles' => User::ROLES,
                 'status_categories' => LeadStatus::CATEGORIES,
                 'operators' => ConditionEvaluator::OPERATORS,
-                'condition_fields' => [...Lead::CONDITION_FIELDS, 'status_key', 'status_category', 'source_key', 'tags', 'qualification_percent'],
+                'condition_fields' => [...Lead::CONDITION_FIELDS, 'status_key', 'status_category', 'source_key', 'tags', 'qualification_percent', 'last_call_outcome'],
                 'automation_triggers' => AutomationRule::TRIGGERS,
                 'automation_actions' => AutomationRule::ACTIONS,
                 'webhook_events' => WebhookDispatcher::EVENTS,

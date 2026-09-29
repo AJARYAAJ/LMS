@@ -2,10 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Jobs\SimulateCallResult;
 use App\Models\Activity;
+use App\Models\AiAgent;
 use App\Models\AssignmentRule;
 use App\Models\Campaign;
 use App\Models\Deal;
+use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\PipelineStage;
@@ -13,6 +16,7 @@ use App\Models\Tag;
 use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\CallService;
 use App\Services\LeadService;
 use App\Services\OrganizationProvisioner;
 use App\Support\Tenant;
@@ -151,6 +155,14 @@ class DemoSeeder extends Seeder
             // Guarantee a few closed-won deals this month so revenue widgets have data.
             $won = $stages->firstWhere('is_won', true);
             Deal::inRandomOrder()->limit(3)->update(['pipeline_stage_id' => $won->id]);
+
+            // A handful of simulated AI calls so the Calls workspace has history.
+            $agent = AiAgent::first();
+            Lead::whereNotNull('phone')->whereNull('converted_at')->orderByDesc('score')->limit(8)->get()
+                ->each(function (Lead $lead) use ($agent, $admin) {
+                    $call = app(CallService::class)->start($lead, $agent, $admin);
+                    SimulateCallResult::dispatchSync($call->id);
+                });
 
             Deal::whereNotNull('pipeline_stage_id')->get()->each(function (Deal $deal) use ($stages) {
                 $stage = $stages->firstWhere('id', $deal->pipeline_stage_id);

@@ -366,6 +366,8 @@ export interface AppNotification {
   body: string
   url: string | null
   kind: string
+  browser?: boolean
+  in_app?: boolean
   read_at: string | null
   created_at: string
 }
@@ -402,7 +404,7 @@ export interface Meta {
   email_templates: Pick<EmailTemplate, 'id' | 'name' | 'category' | 'subject' | 'body'>[]
   sequences: Pick<Sequence, 'id' | 'name' | 'description' | 'steps'>[]
   qualification_criteria: { key: string; label: string }[]
-  features: { ai: boolean; messaging_driver: string }
+  features: { ai: boolean; messaging_driver: string; voice: string | null; email_provider: string }
   layouts: Record<LayoutEntity, PageLayout>
   enums: {
     priorities: Priority[]
@@ -517,4 +519,91 @@ export interface PageLayout {
   sections: { title: string; fields: string[] }[]
   hidden: string[]
   customized: boolean
+}
+
+export interface IntegrationField {
+  key: string
+  label: string
+  required?: boolean
+  secret?: boolean
+  placeholder?: string
+  options?: string[]
+}
+
+export interface IntegrationProvider {
+  key: string
+  category: string
+  name: string
+  description: string
+  fields: IntegrationField[]
+  connection: {
+    id: number
+    is_active: boolean
+    status: 'connected' | 'error'
+    last_error: string | null
+    last_tested_at: string | null
+    values: Record<string, string | null>
+    secrets_set: Record<string, boolean>
+    inbound_url: string | null
+  } | null
+}
+
+export interface AiAgent {
+  id: number
+  name: string
+  integration_id: number | null
+  integration?: { id: number; provider: string; status: string } | null
+  goal: string
+  first_message: string
+  voice: string
+  language: string
+  questions: { key: string; question: string }[] | null
+  max_duration_seconds: number
+  is_active: boolean
+  calls_count?: number
+  completed_calls_count?: number
+  meetings_count?: number
+}
+
+export type CallStatus = 'queued' | 'ringing' | 'in_progress' | 'completed' | 'no_answer' | 'voicemail' | 'failed' | 'canceled'
+
+export interface Call {
+  id: number
+  lead_id: number | null
+  lead?: { id: number; first_name: string; last_name: string | null; company: string | null; phone: string | null } | null
+  ai_agent_id: number | null
+  agent?: { id: number; name: string; questions?: { key: string; question: string }[] | null } | null
+  user?: { id: number; name: string } | null
+  campaign_key: string | null
+  provider: string
+  to_number: string
+  status: CallStatus
+  started_at: string | null
+  ended_at: string | null
+  duration_seconds: number | null
+  recording_url: string | null
+  transcript?: { role: 'agent' | 'lead'; text: string }[] | null
+  summary: string | null
+  outcome: string | null
+  sentiment: 'positive' | 'neutral' | 'negative' | null
+  extracted: { confirmed?: string[]; follow_up_at?: string | null; next_step?: string | null; analyzer?: string } | null
+  error: string | null
+  created_at: string
+}
+
+export interface CallStats {
+  total: number
+  active: number
+  connected: number
+  connect_rate: number
+  meetings: number
+  interested: number
+  avg_duration: number
+  outcomes: Record<string, number>
+}
+
+export interface NotificationPrefs {
+  kinds: { kind: string; label: string; in_app: boolean; email: boolean; browser: boolean }[]
+  digest: boolean
+  chat_alert_kinds: string[]
 }

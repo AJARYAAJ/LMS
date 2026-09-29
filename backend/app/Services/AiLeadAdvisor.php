@@ -5,7 +5,9 @@ namespace App\Services;
 use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIStatusException;
 use App\Ai\LeadBrief;
+use App\Integrations\IntegrationManager;
 use App\Models\Lead;
+use App\Support\Tenant;
 use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 use Throwable;
@@ -17,11 +19,13 @@ use Throwable;
  */
 class AiLeadAdvisor
 {
-    public function __construct(private LeadInsights $insights) {}
+    public function __construct(private LeadInsights $insights, private IntegrationManager $integrations) {}
 
-    public function enabled(): bool
+    public function enabled(?int $organizationId = null): bool
     {
-        return filled(config('services.anthropic.key'));
+        $organizationId ??= Tenant::id();
+
+        return $organizationId ? $this->integrations->anthropic($organizationId) !== null : filled(config('services.anthropic.key'));
     }
 
     /**
@@ -29,7 +33,7 @@ class AiLeadAdvisor
      */
     public function brief(Lead $lead, bool $refresh = false): array
     {
-        if (! $this->enabled()) {
+        if (! $this->enabled($lead->organization_id)) {
             throw new RuntimeException('AI is not configured. Set ANTHROPIC_API_KEY to enable AI briefs.');
         }
 
@@ -46,11 +50,12 @@ class AiLeadAdvisor
 
     private function generate(Lead $lead): array
     {
+        $credentials = $this->integrations->anthropic($lead->organization_id);
         $client = new Client(
-            apiKey: config('services.anthropic.key'),
+            apiKey: $credentials['key'],
             requestOptions: ['timeout' => 45, 'maxRetries' => 1],
         );
-        $model = config('services.anthropic.model');
+        $model = $credentials['model'];
 
         try {
             $message = $client->messages->create(

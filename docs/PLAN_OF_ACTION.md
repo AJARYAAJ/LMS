@@ -89,3 +89,17 @@ Measured with 5,000 leads / 20,000 activities and a real browser:
 | Scroll smoothness | 13–16 fps | 60 fps | removed live `backdrop-filter` from cards and blurred background blobs |
 | Page navigation | 320–420 ms | 12–93 ms | non-suspending code-split pages (React 19 holds Suspense fallbacks ≥300 ms) + idle prefetch |
 | Parallel API requests (dev server) | serialized | concurrent | `PHP_CLI_SERVER_WORKERS=4` |
+
+## 6. Iteration 4 — Integrations, AI calling, notifications
+
+| Feature | Pattern | Status |
+|---|---|---|
+| **Integrations hub** — per-organization vendor connections (encrypted credentials, test, disconnect, inbound webhook URLs): SMTP / SendGrid email, Twilio SMS & WhatsApp, Meta WhatsApp Cloud API, Vapi / Retell / Bland AI voice, Anthropic AI, Slack & Microsoft Teams | Salesforce AppExchange / HubSpot App Marketplace | 🆕 |
+| **AI voice agents** — goal, opening line, voice, qualification questions, max duration, provider | Vapi/Retell-style agent builders | 🆕 |
+| **AI calling** — call one lead or a whole segment (campaign), live status, transcript, summary, outcome, sentiment, extracted answers applied to the lead (qualification, follow-up, callback task), owner notified, workflows triggered | outbound AI SDR | 🆕 |
+| **Built-in call simulator** so the flow is demonstrable without a vendor account | — | 🆕 |
+| **Calls workspace** — call log, filters, transcript viewer, recording player, campaign progress | call centre / dialer views | 🆕 |
+| **Notification preferences** — per user, per event × channel (in-app, email, browser, Slack/Teams), test notification | HubSpot notification settings | 🆕 |
+| **Daily email digest** — today's tasks, overdue follow-ups, new leads | Salesforce/HubSpot daily digests | 🆕 |
+| **Inbound SMS/WhatsApp** — replies land on the lead timeline and notify the owner | two-way messaging | 🆕 |
+| Real Web Push while the app is closed (VAPID) | — | ⏭ (browser notifications work while the app is open or installed) |

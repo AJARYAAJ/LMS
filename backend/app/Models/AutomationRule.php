@@ -28,7 +28,7 @@ class AutomationRule extends Model
         return $this->hasMany(AutomationExecution::class);
     }
 
-    public const TRIGGERS = ['lead.created', 'lead.updated', 'lead.status_changed', 'lead.assigned', 'lead.converted'];
+    public const TRIGGERS = ['lead.created', 'lead.updated', 'lead.status_changed', 'lead.assigned', 'lead.converted', 'lead.call_completed'];
 
     public const ACTIONS = ['create_task', 'notify_owner', 'notify_user', 'update_field', 'add_tag', 'change_status', 'assign_user', 'add_note'];
 }

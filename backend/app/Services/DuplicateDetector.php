@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Lead;
+use App\Support\Phone;
 use Illuminate\Support\Collection;
 
 class DuplicateDetector
@@ -27,7 +28,7 @@ class DuplicateDetector
                     $q->orWhereRaw('lower(email) = ?', [$email]);
                 }
                 if ($phoneDigits && strlen($phoneDigits) >= 6) {
-                    $q->orWhereLike('phone', '%'.substr($phoneDigits, -8).'%');
+                    Phone::whereMatches($q, $phoneDigits, boolean: 'or');
                 }
             })
             ->with(['status:id,name,color', 'owner:id,name'])
