@@ -21,6 +21,7 @@ const AccountsPage = lazyPage(() => import('@/pages/accounts/AccountsPage'), 'Ac
 const TasksPage = lazyPage(() => import('@/pages/tasks/TasksPage'), 'TasksPage')
 const ReportsPage = lazyPage(() => import('@/pages/ReportsPage'), 'ReportsPage')
 const CampaignsPage = lazyPage(() => import('@/pages/CampaignsPage'), 'CampaignsPage')
+const CallsPage = lazyPage(() => import('@/pages/CallsPage'), 'CallsPage')
 const PlaybooksPage = lazyPage(() => import('@/pages/PlaybooksPage'), 'PlaybooksPage')
 const SettingsPage = lazyPage(() => import('@/pages/settings/SettingsPage'), 'SettingsPage')
 const AuditLogPage = lazyPage(() => import('@/pages/AuditLogPage'), 'AuditLogPage')
@@ -29,7 +30,7 @@ const PublicFormPage = lazyPage(() => import('@/pages/PublicFormPage'), 'PublicF
 const NotificationsPage = lazyPage(() => import('@/pages/NotificationsPage'), 'NotificationsPage')
 const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage')
 
-const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, NotFoundPage]
+const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, NotFoundPage]
 
 /** Load every page chunk once the browser is idle so navigation never waits. */
 function usePrefetchPages() {
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="calls" element={<CallsPage />} />
           <Route path="playbooks" element={<PlaybooksPage />} />
           <Route path="settings" element={<Navigate to="/settings/organization" replace />} />
           <Route path="settings/:section" element={<RequireRole allow="admin"><SettingsPage /></RequireRole>} />

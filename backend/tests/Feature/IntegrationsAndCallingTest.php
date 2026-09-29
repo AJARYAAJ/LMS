@@ -158,6 +158,20 @@ class IntegrationsAndCallingTest extends TestCase
         $this->assertSame(2, $this->inTenant($admin, fn () => Call::whereNotNull('campaign_key')->count()));
     }
 
+    public function test_campaign_limit_skips_past_recently_called_leads(): void
+    {
+        $admin = $this->organization();
+        foreach (range(1, 4) as $i) {
+            $this->as($admin)->postJson('/api/v1/leads', ['first_name' => "L{$i}", 'phone' => "+1 555 010 00{$i}0"]);
+        }
+        $agent = $this->inTenant($admin, fn () => AiAgent::first());
+
+        $this->as($admin)->postJson("/api/v1/ai-agents/{$agent->id}/campaign", ['limit' => 2])->assertCreated()->assertJsonPath('data.queued', 2);
+        // The first two were just called, so the next launch reaches the other two instead of skipping.
+        $this->as($admin)->postJson("/api/v1/ai-agents/{$agent->id}/campaign", ['limit' => 2])->assertCreated()->assertJsonPath('data.queued', 2);
+        $this->assertSame(4, $this->inTenant($admin, fn () => Call::distinct()->count('lead_id')));
+    }
+
     public function test_notification_preferences_control_channels(): void
     {
         $admin = $this->organization();
@@ -175,6 +189,29 @@ class IntegrationsAndCallingTest extends TestCase
         Notification::fake();
         $this->as($rep)->postJson('/api/v1/notifications/test')->assertOk();
         Notification::assertSentTo($rep, AppNotification::class, fn ($n) => $n->kind === 'test');
+    }
+
+    public function test_desktop_only_alerts_do_not_count_as_unread(): void
+    {
+        $admin = $this->organization();
+        $rep = $this->member($admin);
+        $this->as($rep)->putJson('/api/v1/auth/notification-preferences', ['notifications' => ['ai_call' => ['in_app' => false, 'browser' => true]]])->assertOk();
+
+        $rep->fresh()->notify(new AppNotification('Call done', kind: 'ai_call'));
+        $rep->fresh()->notify(new AppNotification('Lead assigned', kind: 'assignment'));
+
+        $this->as($rep)->getJson('/api/v1/notifications')->assertOk()
+            ->assertJsonPath('unread', 1)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonFragment(['title' => 'Call done', 'in_app' => false, 'browser' => true]);
+    }
+
+    public function test_meta_lists_connected_voice_providers(): void
+    {
+        $admin = $this->organization();
+        $this->as($admin)->getJson('/api/v1/meta')->assertOk()
+            ->assertJsonPath('data.features.voice', 'simulator')
+            ->assertJsonPath('data.features.voice_providers.0.provider', 'simulator');
     }
 
     public function test_slack_alerts_follow_admin_routing(): void

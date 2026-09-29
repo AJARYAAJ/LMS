@@ -98,6 +98,11 @@ class Lead extends Model
         return $this->morphMany(Note::class, 'notable');
     }
 
+    public function calls(): HasMany
+    {
+        return $this->hasMany(Call::class);
+    }
+
     public function activities(): MorphMany
     {
         return $this->morphMany(Activity::class, 'subject');

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui'
 import { Owner, PriorityBadge, RatingBadge } from '@/components/crm/Badges'
 import { Timeline } from '@/components/crm/Timeline'
+import { AiCallButton, CallDrawer } from '@/components/crm/Calls'
 import { TaskFormModal } from '@/components/crm/TaskFormModal'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { ago, date, dateTime, friendlyDue, humanize, money } from '@/lib/format'
@@ -136,6 +137,7 @@ export function LeadDetailPage() {
         {write && (
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/60 px-6 py-3 dark:border-white/[0.06]">
             <Button size="sm" variant="secondary" icon={<Phone className="size-4" />} onClick={() => { setActivityType('call'); setModal('activity') }}>Log call</Button>
+            <AiCallButton leadId={lead.id} phone={lead.phone} />
             <Button size="sm" variant="secondary" icon={<Send className="size-4" />} onClick={() => setModal('email')} disabled={!lead.email}>Email</Button>
             <Button size="sm" variant="secondary" icon={<CalendarClock className="size-4" />} onClick={() => setModal('task')}>Task</Button>
             <Button size="sm" variant="secondary" icon={<MessageCircle className="size-4" />} onClick={() => setModal('message')} disabled={!lead.phone}>SMS / WhatsApp</Button>
@@ -375,6 +377,7 @@ function ScoreCard({ leadId, canWrite }: { leadId: number; canWrite: boolean }) 
 
 function TimelineTab({ leadId, canWrite, onLog }: { leadId: number; canWrite: boolean; onLog: (type: string) => void }) {
   const [filter, setFilter] = useState('')
+  const [callId, setCallId] = useState<number | null>(null)
   const { data, isLoading } = useActivitiesQuery({ type: 'leads', id: leadId, filter: filter || undefined, per_page: 50 })
   const [remove] = useDeleteActivityMutation()
   const filters = [['', 'All'], ['call', 'Calls'], ['email', 'Emails'], ['meeting', 'Meetings'], ['note', 'Notes'], ['task', 'Tasks'], ['system', 'System']]
@@ -394,7 +397,8 @@ function TimelineTab({ leadId, canWrite, onLog }: { leadId: number; canWrite: bo
           </div>
         )}
       </div>
-      {isLoading ? <PageLoader /> : data?.data.length ? <Timeline items={data.data} onDelete={canWrite ? (a) => remove(a.id) : undefined} /> : <EmptyState icon={<Workflow />} title="Nothing here yet" description="Log a call, meeting or email to start the story." />}
+      {isLoading ? <PageLoader /> : data?.data.length ? <Timeline items={data.data} onDelete={canWrite ? (a) => remove(a.id) : undefined} onOpenCall={setCallId} /> : <EmptyState icon={<Workflow />} title="Nothing here yet" description="Log a call, meeting or email to start the story." />}
+      <CallDrawer callId={callId} onClose={() => setCallId(null)} />
     </div>
   )
 }

@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { AlarmClock, Bell, CheckCheck, UserPlus, Zap } from 'lucide-react'
+import { Bell, CheckCheck } from 'lucide-react'
+import { kindIcon } from '@/components/layout/NotificationBell'
 import { useNotificationsQuery, useReadAllNotificationsMutation, useReadNotificationMutation } from '@/services/api'
 import { Button, EmptyState, PageHeader, PageLoader, Segmented } from '@/components/ui'
 import { dateTime, ago } from '@/lib/format'
 import { useState } from 'react'
 
-const kindIcon: Record<string, typeof Bell> = { assignment: UserPlus, automation: Zap, reminder: AlarmClock }
 
 export function NotificationsPage() {
   const navigate = useNavigate()
@@ -14,11 +14,11 @@ export function NotificationsPage() {
   const { data, isLoading } = useNotificationsQuery(200)
   const [readOne] = useReadNotificationMutation()
   const [readAll, readAllState] = useReadAllNotificationsMutation()
-  const items = (data?.data ?? []).filter((n) => filter === 'all' || !n.read_at)
+  const items = (data?.data ?? []).filter((n) => n.in_app !== false && (filter === 'all' || !n.read_at))
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader icon={<Bell />} title="Notifications" description="Assignments, workflow alerts and task reminders."
+      <PageHeader icon={<Bell />} title="Notifications" description="Assignments, AI call results, lead replies, workflow alerts and task reminders."
         actions={<>
           <Segmented value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'unread', label: `Unread · ${data?.unread ?? 0}` }]} />
           <Button size="sm" variant="secondary" icon={<CheckCheck className="size-4" />} disabled={!data?.unread} loading={readAllState.isLoading} onClick={() => readAll()}>Mark all read</Button>

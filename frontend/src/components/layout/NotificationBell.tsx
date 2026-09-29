@@ -1,18 +1,33 @@
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { AlarmClock, Bell, CheckCheck, UserPlus, Zap } from 'lucide-react'
+import { AlarmClock, Bell, CheckCheck, MessageCircle, PhoneCall, UserPlus, Zap } from 'lucide-react'
+import { showBrowserNotification } from '@/lib/browserNotify'
 import { Menu } from '@/components/ui'
 import { ago } from '@/lib/format'
 import { useNotificationsQuery, useReadAllNotificationsMutation, useReadNotificationMutation } from '@/services/api'
 
-const kindIcon: Record<string, typeof Bell> = { assignment: UserPlus, automation: Zap, reminder: AlarmClock }
+export const kindIcon: Record<string, typeof Bell> = { assignment: UserPlus, automation: Zap, reminder: AlarmClock, ai_call: PhoneCall, inbound_message: MessageCircle }
 
 export function NotificationBell() {
   const navigate = useNavigate()
-  const { data } = useNotificationsQuery(undefined, { pollingInterval: 30_000 })
+  const { data } = useNotificationsQuery(undefined, { pollingInterval: 20_000 })
+  const seen = useRef<Set<string> | null>(null)
+
+  // Pop a desktop notification for anything new since the last poll (never for the first load).
+  useEffect(() => {
+    if (!data) return
+    if (!seen.current) { seen.current = new Set(data.data.map((n) => n.id)); return }
+    for (const n of data.data) {
+      if (seen.current.has(n.id)) continue
+      seen.current.add(n.id)
+      if (!n.read_at && n.browser) showBrowserNotification(n.title, n.body, n.url, n.id)
+    }
+  }, [data])
   const [readOne] = useReadNotificationMutation()
   const [readAll] = useReadAllNotificationsMutation()
   const unread = data?.unread ?? 0
+  const visible = data?.data.filter((n) => n.in_app !== false) ?? []
 
   return (
     <Menu
@@ -39,8 +54,8 @@ export function NotificationBell() {
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {!data?.data.length && <p className="px-3 py-10 text-center text-sm text-slate-500">You're all caught up 🎉</p>}
-            {data?.data.map((n) => {
+            {!visible.length && <p className="px-3 py-10 text-center text-sm text-slate-500">You're all caught up 🎉</p>}
+            {visible.map((n) => {
               const Icon = kindIcon[n.kind] ?? Bell
               return (
                 <button

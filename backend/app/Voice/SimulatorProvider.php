@@ -41,8 +41,9 @@ class SimulatorProvider implements VoiceProvider
         $scenario = match (true) {
             $roll <= 10 => 'no_answer',
             $roll <= 18 => 'voicemail',
-            $roll <= ($warm ? 70 : 45) => 'interested',
-            $roll <= ($warm ? 85 : 65) => 'callback',
+            $roll <= ($warm ? 50 : 33) => 'meeting',
+            $roll <= ($warm ? 65 : 48) => 'interested',
+            $roll <= ($warm ? 80 : 65) => 'callback',
             default => 'not_interested',
         };
 
@@ -59,7 +60,7 @@ class SimulatorProvider implements VoiceProvider
         }
 
         $t = [['role' => 'agent', 'text' => Prompt::firstMessage($agent, $lead)]];
-        $t[] = ['role' => 'lead', 'text' => $scenario === 'not_interested' ? "Hi. I only have a minute, what's this about?" : 'Hi, yes — good timing actually. Go ahead.'];
+        $t[] = ['role' => 'lead', 'text' => $scenario === 'not_interested' ? "Hi. I only have a minute, what's this about?" : 'Hi — good timing actually. Go ahead.'];
 
         if ($scenario === 'not_interested') {
             $t[] = ['role' => 'agent', 'text' => 'Of course. We help teams like '.($lead->company ?: 'yours').' capture and convert more leads. Is improving your sales pipeline a priority right now?'];
@@ -78,21 +79,27 @@ class SimulatorProvider implements VoiceProvider
 
         foreach ($agent->questions ?? [] as $q) {
             $t[] = ['role' => 'agent', 'text' => $q['question']];
-            $t[] = ['role' => 'lead', 'text' => $answers[$q['key']][0] ?? 'Yes, that makes sense for us.'];
+            $t[] = ['role' => 'lead', 'text' => $answers[$q['key']][0] ?? 'That makes sense for us.'];
         }
 
         if ($scenario === 'callback') {
             $t[] = ['role' => 'lead', 'text' => "I'm about to jump into a meeting — can you call me back Thursday afternoon?"];
             $t[] = ['role' => 'agent', 'text' => "Absolutely — I'll put Thursday at 3 PM in the calendar. Thanks, {$lead->first_name}!"];
+        } elseif ($scenario === 'interested') {
+            $t[] = ['role' => 'agent', 'text' => 'Would a short walkthrough with one of our specialists be useful?'];
+            $t[] = ['role' => 'lead', 'text' => 'Could you email me an overview and pricing first? I want to share it with my team before we go further.'];
+            $t[] = ['role' => 'agent', 'text' => "Of course — I'll send that over today. Thanks, {$lead->first_name}!"];
         } else {
             $t[] = ['role' => 'agent', 'text' => 'That sounds like a great fit. Would you be open to a 30-minute demo with one of our specialists next week?'];
             $t[] = ['role' => 'lead', 'text' => 'Sure, Tuesday morning works for me.'];
             $t[] = ['role' => 'agent', 'text' => "Perfect — I've pencilled in Tuesday at 10 AM and you'll get an invite shortly. Thanks, {$lead->first_name}!"];
         }
 
-        $summary = $scenario === 'callback'
-            ? "{$lead->full_name} is interested but busy; asked for a callback Thursday afternoon. Budget, authority, need and timeline were discussed."
-            : "{$lead->full_name} confirmed need, budget and timeline and agreed to a demo on Tuesday at 10 AM.";
+        $summary = match ($scenario) {
+            'callback' => "{$lead->full_name} is interested but busy; asked for a callback Thursday afternoon. Budget, authority, need and timeline were discussed.",
+            'interested' => "{$lead->full_name} is interested and asked for an overview and pricing by email to share with their team.",
+            default => "{$lead->full_name} confirmed need, budget and timeline and agreed to a demo on Tuesday at 10 AM.",
+        };
 
         return ['status' => 'completed', 'final' => true, 'duration_seconds' => 120 + count($t) * 9, 'transcript' => $t, 'summary' => $summary];
     }

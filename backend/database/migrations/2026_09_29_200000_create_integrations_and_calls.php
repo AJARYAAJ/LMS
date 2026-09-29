@@ -34,7 +34,7 @@ return new class extends Migration
             $table->text('goal');
             $table->text('first_message');
             $table->string('voice')->default('alloy');
-            $table->string('language', 12)->default('en');
+            $table->string('language', 12)->default('en-US');
             $table->json('questions')->nullable(); // [{key, question}]
             $table->unsignedSmallInteger('max_duration_seconds')->default(300);
             $table->boolean('is_active')->default(true);

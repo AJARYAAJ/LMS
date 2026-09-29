@@ -1,6 +1,6 @@
 /* LeadFlow service worker: offline app shell + cached static assets.
    API calls (/api/...) are never cached so data is always live. */
-const CACHE = 'leadflow-v1'
+const CACHE = 'leadflow-v2'
 const SHELL = ['/', '/index.html', '/favicon.svg', '/manifest.webmanifest']
 
 self.addEventListener('install', (event) => {
@@ -34,4 +34,17 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match('/index.html')))
   }
+})
+
+// Clicking a desktop notification focuses the app on the related page.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = (event.notification.data && event.notification.data.url) || '/'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const win = wins.find((w) => 'focus' in w)
+      if (win) return win.focus().then((w) => (w && 'navigate' in w ? w.navigate(url) : undefined))
+      return self.clients.openWindow(url)
+    }),
+  )
 })

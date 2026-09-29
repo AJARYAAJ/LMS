@@ -6,6 +6,7 @@ import { setTheme, type Theme } from '@/features/ui/uiSlice'
 import { useUpdatePasswordMutation, useUpdateProfileMutation } from '@/services/api'
 import { Avatar, Badge, Button, Card, ColorPicker, Field, Input, PageHeader } from '@/components/ui'
 import { ROLE_LABELS } from '@/lib/constants'
+import { NotificationPreferences } from '@/components/crm/NotificationPreferences'
 
 export function ProfilePage() {
   const run = useAction()
@@ -62,6 +63,7 @@ export function ProfilePage() {
           </Card>
         </div>
       </div>
+      <div className="mt-6"><NotificationPreferences /></div>
     </div>
   )
 }

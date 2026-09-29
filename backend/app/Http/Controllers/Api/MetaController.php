@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Integrations\Catalog;
 use App\Integrations\IntegrationManager;
 use App\Models\AutomationRule;
 use App\Models\Campaign;
 use App\Models\CustomField;
 use App\Models\EmailTemplate;
+use App\Models\Integration;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
@@ -52,6 +54,8 @@ class MetaController extends Controller
                 'messaging_driver' => app(MessagingService::class)->driver(Tenant::id()),
                 'voice' => app(IntegrationManager::class)->active(Tenant::id(), 'voice')?->provider,
                 'email_provider' => app(IntegrationManager::class)->active(Tenant::id(), 'email')?->provider ?? 'default',
+                'voice_providers' => Integration::query()->where('category', 'voice')->where('is_active', true)->orderBy('id')->get(['id', 'provider'])
+                    ->map(fn (Integration $i) => ['id' => $i->id, 'provider' => $i->provider, 'name' => Catalog::get($i->provider)['name'] ?? $i->provider])->values(),
             ],
             'enums' => [
                 'priorities' => Lead::PRIORITIES,

@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  BarChart3, BookOpenCheck, Building2, CheckSquare, ChevronsLeft, History, Kanban, LayoutDashboard, Megaphone, Settings, Sparkles, Target, Users, X,
+  BarChart3, BookOpenCheck, Building2, CheckSquare, ChevronsLeft, History, Kanban, LayoutDashboard, Megaphone, PhoneCall, Settings, Sparkles, Target, Users, X,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector, usePermissions } from '@/app/hooks'
 import { setMobileNav, toggleSidebar } from '@/features/ui/uiSlice'
@@ -33,6 +33,7 @@ export function Sidebar() {
         { to: '/', label: 'Pulse', icon: LayoutDashboard },
         { to: '/leads', label: 'Leads', icon: Target },
         { to: '/deals', label: 'Pipeline', icon: Kanban },
+        { to: '/calls', label: 'AI calls', icon: PhoneCall },
         { to: '/tasks', label: 'Tasks & calendar', icon: CheckSquare, badge: (tasks?.overdue ?? 0) + (tasks?.today ?? 0) },
       ],
     },

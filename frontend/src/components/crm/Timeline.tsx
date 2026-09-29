@@ -23,7 +23,7 @@ export function ActivityIcon({ type, className }: { type: Activity['type']; clas
   )
 }
 
-export function Timeline({ items, onDelete, showSubject }: { items: Activity[]; onDelete?: (a: Activity) => void; showSubject?: boolean }) {
+export function Timeline({ items, onDelete, showSubject, onOpenCall }: { items: Activity[]; onDelete?: (a: Activity) => void; showSubject?: boolean; onOpenCall?: (callId: number) => void }) {
   return (
     <ol className="relative">
       {items.map((a, i) => (
@@ -47,6 +47,9 @@ export function Timeline({ items, onDelete, showSubject }: { items: Activity[]; 
               {a.outcome && <span className="font-medium text-slate-600 dark:text-slate-300">Outcome: {a.outcome}</span>}
               {a.duration_minutes ? <span>{a.duration_minutes} min</span> : null}
               {a.direction && <span>{humanize(a.direction)}</span>}
+              {onOpenCall && typeof a.meta?.call_id === 'number' && (
+                <button onClick={() => onOpenCall(a.meta!.call_id as number)} className="font-medium text-brand-600 hover:underline">View transcript</button>
+              )}
             </div>
           </div>
         </li>

@@ -404,7 +404,7 @@ export interface Meta {
   email_templates: Pick<EmailTemplate, 'id' | 'name' | 'category' | 'subject' | 'body'>[]
   sequences: Pick<Sequence, 'id' | 'name' | 'description' | 'steps'>[]
   qualification_criteria: { key: string; label: string }[]
-  features: { ai: boolean; messaging_driver: string; voice: string | null; email_provider: string }
+  features: { ai: boolean; messaging_driver: string; voice: string | null; email_provider: string; voice_providers: { id: number; provider: string; name: string }[] }
   layouts: Record<LayoutEntity, PageLayout>
   enums: {
     priorities: Priority[]

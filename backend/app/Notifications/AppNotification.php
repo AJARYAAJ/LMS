@@ -35,6 +35,10 @@ class AppNotification extends Notification
 
     public static function preference(User $user, string $kind, string $channel): bool
     {
+        if ($kind === 'test') {
+            return true; // a test goes everywhere so every channel can be checked
+        }
+
         $default = self::KINDS[$kind][$channel] ?? ($channel === 'in_app');
 
         return (bool) ($user->preferences['notifications'][$kind][$channel] ?? $default);

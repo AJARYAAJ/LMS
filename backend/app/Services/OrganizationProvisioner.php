@@ -230,7 +230,8 @@ class OrganizationProvisioner
             'integration_id' => $simulator->id,
             'goal' => 'Qualify new inbound leads (budget, authority, need, timeline) and book a 30-minute demo with a specialist.',
             'first_message' => 'Hi {first_name}, this is Ava from {organization} — you recently showed interest in what we do. Do you have two minutes?',
-            'voice' => 'ava',
+            'voice' => 'nova',
+            'language' => 'en-US',
             'questions' => [
                 ['key' => 'need', 'question' => 'What prompted you to look for a solution right now?'],
                 ['key' => 'budget', 'question' => 'Have you set aside a budget for this?'],

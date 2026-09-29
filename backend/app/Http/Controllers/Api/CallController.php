@@ -88,7 +88,9 @@ class CallController extends Controller
             'limit' => ['sometimes', 'integer', 'between:1,200'],
         ]);
 
+        // Leave out leads already called in the last day so they don't use up the campaign's slots.
         $leads = Lead::visibleTo($request->user())->whereNull('converted_at')->whereNotNull('phone')
+            ->whereDoesntHave('calls', fn ($q) => $q->where('created_at', '>=', now()->subDay()))
             ->when($data['lead_ids'] ?? null, fn ($q, $ids) => $q->whereIn('id', $ids))
             ->when($data['conditions'] ?? null, fn ($q, $c) => $segment->apply($q, $c))
             ->orderByDesc('score')
