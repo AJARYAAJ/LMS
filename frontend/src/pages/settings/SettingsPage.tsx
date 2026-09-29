@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  Building, Cable, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, ListChecks, Pencil, Plus, Recycle, Route, Settings,
+  Building, Cable, LayoutTemplate, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, ListChecks, Pencil, Plus, Recycle, Route, Settings,
   Shield, Tag as TagIcon, Trash2, Users, Workflow, Zap,
 } from 'lucide-react'
 import { useAction, useCurrentUser } from '@/app/hooks'
@@ -16,6 +16,7 @@ import { ago, humanize } from '@/lib/format'
 import type { CustomField, LeadSource, LeadStatus, PipelineStage, Tag, Team, User } from '@/types'
 import { SectionHeader } from '@/components/crm/ConditionBuilder'
 import { AssignmentRules, Automations, Integrations, ScoringRules, WebForms } from './RuleSections'
+import { LayoutEditor } from './LayoutEditor'
 
 const sections = [
   { key: 'organization', label: 'Organization', icon: Building, group: 'Workspace' },
@@ -27,6 +28,7 @@ const sections = [
   { key: 'sources', label: 'Lead sources', icon: Route, group: 'Process' },
   { key: 'tags', label: 'Tags', icon: TagIcon, group: 'Process' },
   { key: 'fields', label: 'Custom fields', icon: ListChecks, group: 'Process' },
+  { key: 'layouts', label: 'Page layouts', icon: LayoutTemplate, group: 'Process' },
   { key: 'assignment', label: 'Assignment rules', icon: Zap, group: 'Automation' },
   { key: 'scoring', label: 'Lead scoring', icon: Calculator, group: 'Automation' },
   { key: 'automations', label: 'Workflows', icon: Workflow, group: 'Automation' },
@@ -66,6 +68,7 @@ export function SettingsPage() {
           {active === 'sources' && <SimpleList resource={resources.sources} title="Lead sources" description="Where leads come from. Used for routing, scoring and ROI reports." fields={['name', 'color', 'is_active']} />}
           {active === 'tags' && <SimpleList resource={resources.tags} title="Tags" description="Flexible labels for segmentation and automation conditions." fields={['name', 'color']} />}
           {active === 'fields' && <CustomFieldsSection />}
+          {active === 'layouts' && <LayoutEditor />}
           {active === 'assignment' && <AssignmentRules />}
           {active === 'scoring' && <ScoringRules />}
           {active === 'automations' && <Automations />}

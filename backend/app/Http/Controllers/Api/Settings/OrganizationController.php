@@ -28,6 +28,10 @@ class OrganizationController extends Controller
         ]);
 
         $original = $organization->getOriginal();
+        if (array_key_exists('settings', $data)) {
+            // Merge so saving one settings area (e.g. qualification) never wipes another (e.g. layouts).
+            $data['settings'] = array_merge($organization->settings ?? [], $data['settings'] ?? []);
+        }
         $organization->update($data);
         $audit->logChanges('organization.updated', $organization, $original);
 

@@ -403,6 +403,7 @@ export interface Meta {
   sequences: Pick<Sequence, 'id' | 'name' | 'description' | 'steps'>[]
   qualification_criteria: { key: string; label: string }[]
   features: { ai: boolean; messaging_driver: string }
+  layouts: Record<LayoutEntity, PageLayout>
   enums: {
     priorities: Priority[]
     ratings: Rating[]
@@ -508,4 +509,12 @@ export interface AiBrief {
   risk: string
   model: string
   generated_at: string
+}
+
+export type LayoutEntity = 'lead' | 'contact' | 'account' | 'deal'
+
+export interface PageLayout {
+  sections: { title: string; fields: string[] }[]
+  hidden: string[]
+  customized: boolean
 }

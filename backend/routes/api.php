@@ -128,6 +128,9 @@ Route::prefix('v1')->group(function () {
             Route::get('organization', [Settings\OrganizationController::class, 'show']);
             Route::patch('organization', [Settings\OrganizationController::class, 'update']);
 
+            Route::get('layouts', [Settings\LayoutController::class, 'index']);
+            Route::put('layouts/{entity}', [Settings\LayoutController::class, 'update']);
+            Route::delete('layouts/{entity}', [Settings\LayoutController::class, 'destroy']);
             Route::post('lead-statuses/reorder', [Settings\LeadStatusController::class, 'reorder']);
             Route::post('scoring-rules/recalculate', [Settings\ScoringRuleController::class, 'recalculate']);
             Route::get('automation-rules/{id}/executions', [Settings\AutomationRuleController::class, 'executions'])->whereNumber('id');

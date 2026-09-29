@@ -22,7 +22,7 @@ See [`docs/PLAN_OF_ACTION.md`](docs/PLAN_OF_ACTION.md) for the feature-parity ma
 | Automation | WHEN / IF / THEN workflow builder (tasks, notifications, field updates, tags, status, assignment, notes) with execution log |
 | Pipeline | Drag-and-drop deal board, weighted forecast, deal/contact/account workspaces |
 | Analytics | Dashboard (KPIs, lead flow, sources, stages, temperature, engagement heatmap), funnel, source ROI, team leaderboard, campaign cost-per-lead, lead aging |
-| Common | Global search / command palette, notifications centre + page, saved views, **advanced segment builder**, custom fields on leads/contacts/accounts/deals, **installable PWA**, bulk actions, **merge duplicates**, **recycle bin**, audit log, profile & theme, custom fields, teams, RBAC |
+| Common | Global search / command palette, notifications centre + page, saved views, **advanced segment builder**, custom fields on leads/contacts/accounts/deals, **custom page layouts** (drag-and-drop sections, hidden fields, live preview), **installable PWA**, bulk actions, **merge duplicates**, **recycle bin**, audit log, profile & theme, custom fields, teams, RBAC |
 | Integrations | Signed webhooks (HMAC-SHA256, retries), API keys, REST API under `/api/v1` |
 
 ### Roles

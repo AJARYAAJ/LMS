@@ -14,7 +14,7 @@ import {
   useUpdateNoteMutation, useUpdateQualificationMutation,
 } from '@/services/api'
 import {
-  Avatar, Badge, Button, Card, ConfirmDialog, DescriptionList, EmptyState, Input, Menu, MenuItem, Modal, PageLoader, ScoreRing, Tabs, Textarea,
+  Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Menu, MenuItem, Modal, PageLoader, ScoreRing, Tabs, Textarea,
 } from '@/components/ui'
 import { Owner, PriorityBadge, RatingBadge } from '@/components/crm/Badges'
 import { Timeline } from '@/components/crm/Timeline'
@@ -22,6 +22,7 @@ import { TaskFormModal } from '@/components/crm/TaskFormModal'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { ago, date, dateTime, friendlyDue, humanize, money } from '@/lib/format'
 import { RATING_META } from '@/lib/constants'
+import { LayoutDetails, type LayoutValues } from '@/lib/layouts'
 import type { LeadStatus } from '@/types'
 import { LeadFormModal } from './LeadFormModal'
 import { AiBriefPanel, AssignModal, ConvertModal, EmailComposerModal, EnrollModal, LostModal, MergeModal, MessageModal } from './LeadModals'
@@ -264,25 +265,18 @@ export function LeadDetailPage() {
           )}
 
           <Card title="Details" action={write && <button onClick={() => setModal('edit')} className="text-xs font-medium text-brand-600 hover:text-brand-700">Edit</button>}>
-            <DescriptionList items={[
-              { label: 'Source', value: lead.source && <Badge color={lead.source.color}>{lead.source.name}</Badge> },
-              { label: 'Campaign', value: lead.campaign?.name },
-              { label: 'Team', value: lead.team?.name },
-              { label: 'Industry', value: lead.industry },
-              { label: 'Company size', value: lead.company_size },
-              { label: 'Budget', value: lead.budget && money(lead.budget, currency) },
-              { label: 'Timeline', value: lead.timeline },
-              { label: 'Next follow-up', value: lead.next_follow_up_at && <span className={clsx(new Date(lead.next_follow_up_at) < new Date() && !converted && 'text-rose-600')}>{friendlyDue(lead.next_follow_up_at)}</span> },
-              { label: 'Last contacted', value: lead.last_contacted_at && ago(lead.last_contacted_at) },
-              { label: 'Created', value: `${date(lead.created_at)} · ${lead.creator?.name ?? 'system'}` },
-              ...(meta?.custom_fields.filter((f) => f.entity === 'lead').map((f) => ({ label: f.label, value: String(lead.custom_fields?.[f.key] ?? '') })) ?? []),
-            ]} />
-            {lead.requirements && (
-              <div className="mt-4 rounded-2xl bg-slate-900/[0.03] p-4 dark:bg-white/[0.03]">
-                <p className="label">Requirements</p>
-                <p className="text-sm whitespace-pre-line text-slate-700 dark:text-slate-300">{lead.requirements}</p>
-              </div>
-            )}
+            {/* Fields already shown in the header are not repeated; the rest follow the organization's page layout. */}
+            <LayoutDetails
+              entity="lead"
+              meta={meta}
+              currency={currency}
+              record={{ ...lead, tag_ids: lead.tags?.map((t) => t.id) } as unknown as LayoutValues}
+              skip={['first_name', 'last_name', 'job_title', 'email', 'phone', 'company', 'website', 'city', 'country', 'tag_ids', 'owner_id', 'expected_value', 'priority', 'lead_status_id']}
+              footer={[
+                { label: 'Last contacted', value: lead.last_contacted_at && ago(lead.last_contacted_at) },
+                { label: 'Created', value: `${date(lead.created_at)} · ${lead.creator?.name ?? 'system'}` },
+              ]}
+            />
           </Card>
 
           <ScoreCard leadId={lead.id} canWrite={write} />

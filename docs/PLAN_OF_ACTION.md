@@ -46,6 +46,7 @@ Legend: ✅ built · 🆕 added in this iteration · ⏭ later phase
 | **AI lead brief** (Claude: summary, next action, talking points, risk; cached, optional) | Zoho Zia / Einstein | ✅ |
 | **Advanced segmentation** (condition builder on the lead list, saved as views) | HubSpot lists / Salesforce list views | ✅ |
 | **Custom fields on contacts, accounts and deals** | Salesforce/HubSpot properties | ✅ |
+| **Custom page layouts** — drag-and-drop sections, rename/reorder, hide fields, live preview; drives forms and detail panels for leads, contacts, accounts, deals | Salesforce page layouts / Zoho layouts | ✅ |
 | **Notes & tasks on every record**, lost-deal reasons, notifications centre page, webhook edit/pause | all | ✅ |
 | **Installable mobile app (PWA)** — manifest, icons, offline shell, home-screen shortcuts | mobile CRM apps | ✅ (native store apps ⏭) |
 

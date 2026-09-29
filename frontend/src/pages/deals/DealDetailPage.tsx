@@ -4,8 +4,9 @@ import clsx from 'clsx'
 import { ArrowLeft, Building2, Check, Pencil, Phone, Target, Trash2, Trophy, User } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
 import { useDealQuery, useDeleteDealMutation, useMetaQuery, useMoveDealMutation } from '@/services/api'
-import { Avatar, Badge, Button, Card, ConfirmDialog, DescriptionList, EmptyState, PageLoader } from '@/components/ui'
-import { RecordPanels, useCustomFieldRows } from '@/components/crm/RecordPanels'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, PageLoader } from '@/components/ui'
+import { RecordPanels } from '@/components/crm/RecordPanels'
+import { LayoutDetails, type LayoutValues } from '@/lib/layouts'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { date, money } from '@/lib/format'
 import { DealFormModal, LostDealModal } from './DealFormModal'
@@ -22,7 +23,6 @@ export function DealDetailPage() {
   const [remove, removeState] = useDeleteDealMutation()
   const [modal, setModal] = useState<null | 'edit' | 'activity' | 'delete'>(null)
   const [lostStage, setLostStage] = useState<number | null>(null)
-  const customRows = useCustomFieldRows('deal', deal?.custom_fields)
 
   if (isLoading) return <PageLoader />
   if (!deal) return <EmptyState title="Deal not found" />
@@ -83,15 +83,22 @@ export function DealDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <RecordPanels type="deals" id={deal.id} name={deal.name} />
         <Card title="Details">
-          <DescriptionList items={[
-            { label: 'Owner', value: deal.owner && <span className="inline-flex items-center gap-2"><Avatar name={deal.owner.name} color={deal.owner.avatar_color} size="xs" />{deal.owner.name}</span> },
-            { label: 'Expected close', value: date(deal.expected_close_date) },
-            { label: 'Closed', value: deal.closed_at && date(deal.closed_at) },
-            { label: 'Lost reason', value: deal.lost_reason },
-            { label: 'Created', value: date(deal.created_at) },
-            ...customRows,
-          ]} />
-          {deal.description && <p className="mt-4 text-sm whitespace-pre-line text-slate-600 dark:text-slate-400">{deal.description}</p>}
+          <LayoutDetails
+            entity="deal"
+            meta={meta}
+            currency={deal.currency || currency}
+            record={deal as unknown as LayoutValues}
+            skip={['name', 'amount', 'pipeline_stage_id']}
+            extras={{
+              accounts: deal.account ? [{ value: deal.account.id, label: deal.account.name }] : [],
+              contacts: deal.contact ? [{ value: deal.contact.id, label: `${deal.contact.first_name} ${deal.contact.last_name ?? ''}`.trim() }] : [],
+            }}
+            footer={[
+              { label: 'Closed', value: deal.closed_at && date(deal.closed_at) },
+              { label: 'Lost reason', value: deal.lost_reason },
+              { label: 'Created', value: date(deal.created_at) },
+            ]}
+          />
         </Card>
       </div>
 

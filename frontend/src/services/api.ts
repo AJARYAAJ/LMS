@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
 import type {
-  Account, Activity, AiBrief, ApiKey, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
+  Account, Activity, AiBrief, ApiKey, LayoutEntity, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
   ScoringRule, SearchResult, Tag, Task, Team, User, Webhook,
 } from '@/types'
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -420,11 +420,11 @@ export const api = createApi({
     }),
     saveSetting: b.mutation<{ data: unknown; secret?: string }, { resource: string; tag: SettingsTag; id?: number; body: Record<string, unknown> }>({
       query: ({ resource, id, body }) => ({ url: `settings/${resource}${id ? `/${id}` : ''}`, method: id ? 'PATCH' : 'POST', body }),
-      invalidatesTags: (_r, _e, { tag }) => [tag, 'Meta', 'Leads'],
+      invalidatesTags: (_r, _e, { tag }) => [tag, 'Meta', 'Leads', 'Layout'],
     }),
     deleteSetting: b.mutation<void, { resource: string; tag: SettingsTag; id: number }>({
       query: ({ resource, id }) => ({ url: `settings/${resource}/${id}`, method: 'DELETE' }),
-      invalidatesTags: (_r, _e, { tag }) => [tag, 'Meta'],
+      invalidatesTags: (_r, _e, { tag }) => [tag, 'Meta', 'Layout'],
     }),
     reorderStatuses: b.mutation<void, number[]>({
       query: (ids) => ({ url: 'settings/lead-statuses/reorder', method: 'POST', body: { ids } }),
@@ -433,6 +433,19 @@ export const api = createApi({
     recalculateScores: b.mutation<{ message: string }, void>({
       query: () => ({ url: 'settings/scoring-rules/recalculate', method: 'POST' }),
       invalidatesTags: ['Leads', 'Lead', 'Score', 'Dashboard'],
+    }),
+    layouts: b.query<Record<LayoutEntity, PageLayout & { catalog: string[]; required: string[] }>, void>({
+      query: () => 'settings/layouts',
+      transformResponse: (r: { data: never }) => r.data,
+      providesTags: ['Layout'],
+    }),
+    saveLayout: b.mutation<PageLayout, { entity: LayoutEntity; sections: PageLayout['sections']; hidden: string[] }>({
+      query: ({ entity, ...body }) => ({ url: `settings/layouts/${entity}`, method: 'PUT', body }),
+      invalidatesTags: ['Layout', 'Meta'],
+    }),
+    resetLayout: b.mutation<PageLayout, LayoutEntity>({
+      query: (entity) => ({ url: `settings/layouts/${entity}`, method: 'DELETE' }),
+      invalidatesTags: ['Layout', 'Meta'],
     }),
     automationExecutions: b.query<{ id: number; status: string; message: string | null; created_at: string; lead: { id: number; first_name: string; last_name: string | null } | null }[], number>({
       query: (id) => `settings/automation-rules/${id}/executions`,
@@ -471,7 +484,7 @@ export const {
   useApiKeysQuery, useCreateApiKeyMutation, useRevokeApiKeyMutation,
   useLeadQueueQuery, useClaimLeadMutation, useMergeLeadMutation, useTrashQuery, useRestoreLeadMutation,
   useUpdateQualificationMutation, useInsightsQuery, useSendEmailMutation, usePreviewEmailMutation,
-  useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
+  useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
 
 // Typed helpers for settings resources.

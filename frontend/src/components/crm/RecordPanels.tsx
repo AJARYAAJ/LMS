@@ -3,10 +3,10 @@ import clsx from 'clsx'
 import { CheckCircle2, Circle, Pin, PinOff, Plus, Trash2 } from 'lucide-react'
 import { useAction, useCurrentUser, usePermissions } from '@/app/hooks'
 import {
-  useActivitiesQuery, useAddNoteMutation, useDeleteActivityMutation, useDeleteNoteMutation, useMetaQuery, useNotesQuery, useTasksQuery,
+  useActivitiesQuery, useAddNoteMutation, useDeleteActivityMutation, useDeleteNoteMutation, useNotesQuery, useTasksQuery,
   useToggleTaskMutation, useUpdateNoteMutation, type SubjectType,
 } from '@/services/api'
-import { Avatar, Badge, Button, Card, EmptyState, Field, Input, Select, Tabs, Textarea } from '@/components/ui'
+import { Avatar, Badge, Button, Card, EmptyState, Tabs, Textarea } from '@/components/ui'
 import { PriorityBadge } from './Badges'
 import { Timeline } from './Timeline'
 import { TaskFormModal } from './TaskFormModal'
@@ -112,42 +112,4 @@ export function TasksPanel({ type, id, name }: { type: SubjectType; id: number; 
       <TaskFormModal open={open} onClose={() => setOpen(false)} subject={{ type: SINGULAR[type], id, name }} />
     </div>
   )
-}
-
-/** Inputs for the organization's custom fields of one entity. */
-export function CustomFieldInputs({ entity, value, onChange }: { entity: 'lead' | 'contact' | 'account' | 'deal'; value: Record<string, unknown>; onChange: (v: Record<string, unknown>) => void }) {
-  const { data: meta } = useMetaQuery()
-  const fields = meta?.custom_fields.filter((f) => f.entity === entity) ?? []
-  if (!fields.length) return null
-  const set = (k: string, v: unknown) => onChange({ ...value, [k]: v })
-
-  return (
-    <>
-      {fields.map((f) => {
-        const v = value[f.key]
-        return (
-          <Field key={f.id} label={f.label} required={f.is_required}>
-            {f.type === 'select' ? (
-              <Select value={String(v ?? '')} onChange={(e) => set(f.key, e.target.value)} placeholder="—">{f.options?.map((o) => <option key={o}>{o}</option>)}</Select>
-            ) : f.type === 'boolean' ? (
-              <Select value={v === true ? 'yes' : v === false ? 'no' : ''} onChange={(e) => set(f.key, e.target.value === '' ? null : e.target.value === 'yes')} placeholder="—"><option value="yes">Yes</option><option value="no">No</option></Select>
-            ) : f.type === 'textarea' ? (
-              <Textarea rows={2} value={String(v ?? '')} onChange={(e) => set(f.key, e.target.value)} />
-            ) : (
-              <Input type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} value={String(v ?? '')} required={f.is_required} onChange={(e) => set(f.key, e.target.value)} />
-            )}
-          </Field>
-        )
-      })}
-    </>
-  )
-}
-
-/** Description-list rows for custom field values. */
-export function useCustomFieldRows(entity: 'lead' | 'contact' | 'account' | 'deal', values?: Record<string, unknown> | null) {
-  const { data: meta } = useMetaQuery()
-  return (meta?.custom_fields.filter((f) => f.entity === entity) ?? []).map((f) => {
-    const v = values?.[f.key]
-    return { label: f.label, value: v === true ? 'Yes' : v === false ? 'No' : v == null || v === '' ? '' : String(v) }
-  })
 }

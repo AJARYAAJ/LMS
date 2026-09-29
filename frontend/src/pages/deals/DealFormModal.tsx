@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useAction } from '@/app/hooks'
 import { useAccountsQuery, useContactsQuery, useMetaQuery, useSaveDealMutation } from '@/services/api'
-import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
+import { Button, Input, Modal } from '@/components/ui'
 import type { Deal } from '@/types'
-import { CustomFieldInputs } from '@/components/crm/RecordPanels'
+import { LayoutFields } from '@/lib/layouts'
 
 export function DealFormModal({ open, onClose, deal, defaults }: { open: boolean; onClose: () => void; deal?: Deal | null; defaults?: Partial<Deal> }) {
   const run = useAction()
@@ -25,8 +25,6 @@ export function DealFormModal({ open, onClose, deal, defaults }: { open: boolean
     setCustom(d.custom_fields ?? {})
   }, [open, deal, defaults, meta])
 
-  const set = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }))
-
   const submit = async () => {
     const body = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : ['amount'].includes(k) ? Number(v) : ['pipeline_stage_id', 'account_id', 'contact_id', 'owner_id'].includes(k) ? Number(v) : v]))
     if (body.amount === null) delete body.amount
@@ -38,17 +36,18 @@ export function DealFormModal({ open, onClose, deal, defaults }: { open: boolean
   return (
     <Modal open={open} onClose={onClose} size="lg" title={deal ? 'Edit deal' : 'New deal'}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit} disabled={!form.name} loading={isLoading}>{deal ? 'Save' : 'Create deal'}</Button></>}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Deal name" required className="sm:col-span-2"><Input autoFocus value={form.name ?? ''} onChange={set('name')} /></Field>
-        <Field label="Amount"><Input type="number" min={0} value={form.amount ?? ''} onChange={set('amount')} /></Field>
-        <Field label="Stage"><Select value={form.pipeline_stage_id ?? ''} onChange={set('pipeline_stage_id')}>{meta?.stages.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.probability}%</option>)}</Select></Field>
-        <Field label="Account"><Select value={form.account_id ?? ''} onChange={set('account_id')} placeholder="—">{accounts?.data.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
-        <Field label="Contact"><Select value={form.contact_id ?? ''} onChange={set('contact_id')} placeholder="—">{contacts?.data.map((c) => <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>)}</Select></Field>
-        <Field label="Owner"><Select value={form.owner_id ?? ''} onChange={set('owner_id')} placeholder="Me">{meta?.users.filter((u) => u.role !== 'viewer').map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
-        <Field label="Expected close"><Input type="date" value={form.expected_close_date ?? ''} onChange={set('expected_close_date')} /></Field>
-        <CustomFieldInputs entity="deal" value={custom} onChange={setCustom} />
-        <Field label="Description" className="sm:col-span-2"><Textarea rows={3} value={form.description ?? ''} onChange={set('description')} /></Field>
-      </div>
+      <LayoutFields
+        entity="deal"
+        meta={meta}
+        values={{ ...form, custom_fields: custom }}
+        required={['name']}
+        placeholders={{ owner_id: 'Me' }}
+        extras={{
+          accounts: accounts?.data.map((a) => ({ value: a.id, label: a.name })),
+          contacts: contacts?.data.map((c) => ({ value: c.id, label: `${c.first_name} ${c.last_name ?? ''}`.trim() })),
+        }}
+        onChange={(k, v) => (k.startsWith('custom.') ? setCustom((c) => ({ ...c, [k.slice(7)]: v })) : setForm((f) => ({ ...f, [k]: v as string })))}
+      />
     </Modal>
   )
 }

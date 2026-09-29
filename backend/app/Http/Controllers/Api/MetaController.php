@@ -20,6 +20,7 @@ use App\Models\WebForm;
 use App\Services\ConditionEvaluator;
 use App\Services\EmailComposer;
 use App\Services\WebhookDispatcher;
+use App\Support\PageLayouts;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -41,6 +42,7 @@ class MetaController extends Controller
             'email_templates' => EmailTemplate::orderBy('name')->get(['id', 'name', 'category', 'subject', 'body']),
             'sequences' => Sequence::where('is_active', true)->orderBy('name')->get(['id', 'name', 'description', 'steps']),
             'qualification_criteria' => request()->user()->organization->qualificationCriteria(),
+            'layouts' => PageLayouts::all(request()->user()->organization),
             'features' => [
                 'ai' => filled(config('services.anthropic.key')),
                 'messaging_driver' => config('services.messaging.driver', 'log'),

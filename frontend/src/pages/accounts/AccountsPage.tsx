@@ -3,8 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Building2, Globe, Pencil, Phone, Plus, Search, Trash2, Users } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
 import { useAccountQuery, useAccountsQuery, useDeleteAccountMutation, useMetaQuery, useSaveAccountMutation } from '@/services/api'
-import { Avatar, Badge, Button, Card, ConfirmDialog, DescriptionList, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Pagination, Select, Textarea } from '@/components/ui'
-import { CustomFieldInputs, RecordPanels, useCustomFieldRows } from '@/components/crm/RecordPanels'
+import { Avatar, Badge, Button, Card, ConfirmDialog, EmptyState, Input, Modal, PageHeader, PageLoader, Pagination } from '@/components/ui'
+import { RecordPanels } from '@/components/crm/RecordPanels'
+import { LayoutDetails, LayoutFields, type LayoutValues } from '@/lib/layouts'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { date, money } from '@/lib/format'
 import type { Account } from '@/types'
@@ -19,7 +20,6 @@ function AccountFormModal({ open, onClose, account }: { open: boolean; onClose: 
 
   useEffect(() => { if (open) { setForm(Object.fromEntries(keys.map((k) => [k, String(account?.[k] ?? '')]))); setCustom(account?.custom_fields ?? {}) } }, [open, account]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const submit = async () => {
     const body = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : k === 'owner_id' || k === 'annual_revenue' ? Number(v) : v]))
     if (await run(save({ ...(account ? { id: account.id } : {}), ...body, custom_fields: custom } as Partial<Account>), account ? 'Account updated' : 'Account created')) onClose()
@@ -27,20 +27,13 @@ function AccountFormModal({ open, onClose, account }: { open: boolean; onClose: 
 
   return (
     <Modal open={open} onClose={onClose} size="lg" title={account ? 'Edit account' : 'New account'} footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit} disabled={!form.name} loading={isLoading}>Save</Button></>}>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" required className="sm:col-span-2"><Input autoFocus value={form.name ?? ''} onChange={set('name')} /></Field>
-        <Field label="Website"><Input value={form.website ?? ''} onChange={set('website')} /></Field>
-        <Field label="Domain"><Input value={form.domain ?? ''} onChange={set('domain')} /></Field>
-        <Field label="Industry"><Input value={form.industry ?? ''} onChange={set('industry')} /></Field>
-        <Field label="Company size"><Input value={form.company_size ?? ''} onChange={set('company_size')} /></Field>
-        <Field label="Phone"><Input value={form.phone ?? ''} onChange={set('phone')} /></Field>
-        <Field label="Annual revenue"><Input type="number" value={form.annual_revenue ?? ''} onChange={set('annual_revenue')} /></Field>
-        <Field label="City"><Input value={form.city ?? ''} onChange={set('city')} /></Field>
-        <Field label="Country"><Input value={form.country ?? ''} onChange={set('country')} /></Field>
-        <Field label="Owner" className="sm:col-span-2"><Select value={form.owner_id ?? ''} onChange={set('owner_id')} placeholder="—">{meta?.users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
-        <CustomFieldInputs entity="account" value={custom} onChange={setCustom} />
-        <Field label="Description" className="sm:col-span-2"><Textarea value={form.description ?? ''} onChange={set('description')} /></Field>
-      </div>
+      <LayoutFields
+        entity="account"
+        meta={meta}
+        values={{ ...form, custom_fields: custom }}
+        required={['name']}
+        onChange={(k, v) => (k.startsWith('custom.') ? setCustom((c) => ({ ...c, [k.slice(7)]: v })) : setForm((f) => ({ ...f, [k]: v as string })))}
+      />
     </Modal>
   )
 }
@@ -94,7 +87,7 @@ export function AccountDetailPage() {
   const { write, manager } = usePermissions()
   const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
   const { data: a, isLoading } = useAccountQuery(id)
-  const customRows = useCustomFieldRows('account', a?.custom_fields)
+  const { data: meta } = useMetaQuery()
   const [remove] = useDeleteAccountMutation()
   const [modal, setModal] = useState<null | 'edit' | 'activity' | 'delete'>(null)
 
@@ -140,12 +133,7 @@ export function AccountDetailPage() {
           {!a.deals?.length && <p className="text-sm text-slate-500">No deals.</p>}
         </Card>
         <Card title="About">
-          <DescriptionList items={[
-            { label: 'Company size', value: a.company_size }, { label: 'Annual revenue', value: a.annual_revenue && money(a.annual_revenue, currency) },
-            { label: 'Location', value: [a.city, a.country].filter(Boolean).join(', ') }, { label: 'Owner', value: a.owner?.name }, { label: 'Created', value: date(a.created_at) },
-            ...customRows,
-          ]} />
-          {a.description && <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{a.description}</p>}
+          <LayoutDetails entity="account" meta={meta} record={a as unknown as LayoutValues} currency={currency} skip={['name']} footer={[{ label: 'Created', value: date(a.created_at) }]} />
         </Card>
       </div>
       <RecordPanels type="accounts" id={a.id} name={a.name} />
