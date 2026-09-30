@@ -9,12 +9,47 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\User;
+use App\Reports\Entities;
+use App\Reports\GoalTracker;
+use App\Reports\ReportEngine;
+use App\Reports\ReportRange;
+use App\Reports\TypeReports;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
+    /** Everything the report studio can offer: entities, groupings, measures, ranges, charts, goal metrics. */
+    public function catalog(): JsonResponse
+    {
+        return response()->json(['data' => [
+            'entities' => Entities::catalog(),
+            'ranges' => collect(ReportRange::PRESETS)->map(fn ($label, $key) => ['key' => $key, 'label' => $label])->values(),
+            'charts' => ReportEngine::CHARTS,
+            'types' => collect(TypeReports::TYPES)->map(fn ($label, $key) => ['key' => $key, 'label' => $label])->values(),
+            'goal_metrics' => GoalTracker::catalog(),
+        ]]);
+    }
+
+    /** Run an ad-hoc report spec (report studio preview). */
+    public function run(Request $request, ReportEngine $engine): JsonResponse
+    {
+        $data = $request->validate(['spec' => ['required', 'array']]);
+
+        return response()->json(['data' => $engine->run($request->user(), $data['spec'])]);
+    }
+
+    /** A ready-made report page for one area (leads, pipeline, activities, tasks, AI calls, messaging). */
+    public function type(Request $request, string $type, TypeReports $reports): JsonResponse
+    {
+        abort_unless(array_key_exists($type, TypeReports::TYPES), 404);
+        $request->validate(['range' => ['nullable', 'string'], 'from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        $range = ReportRange::resolve($request->query('range'), $request->query('from'), $request->query('to'));
+
+        return response()->json(['data' => $reports->build($request->user(), $type, $range)]);
+    }
+
     public function leads(Request $request): JsonResponse
     {
         $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);

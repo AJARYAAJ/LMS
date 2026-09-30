@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DealController;
+use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\InboundWebhookController;
 use App\Http\Controllers\Api\LeadCaptureController;
 use App\Http\Controllers\Api\LeadController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\PublicFormController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\SavedReportController;
 use App\Http\Controllers\Api\SavedViewController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\Settings;
@@ -67,6 +69,19 @@ Route::prefix('v1')->group(function () {
         Route::get('search', SearchController::class);
         Route::get('dashboard', [DashboardController::class, 'index']);
         Route::get('reports/leads', [ReportController::class, 'leads']);
+        Route::get('reports/catalog', [ReportController::class, 'catalog']);
+        Route::post('reports/run', [ReportController::class, 'run'])->middleware('throttle:120,1');
+        Route::get('reports/type/{type}', [ReportController::class, 'type']);
+        Route::get('saved-reports', [SavedReportController::class, 'index']);
+        Route::post('saved-reports', [SavedReportController::class, 'store']);
+        Route::patch('saved-reports/{id}', [SavedReportController::class, 'update'])->whereNumber('id');
+        Route::delete('saved-reports/{id}', [SavedReportController::class, 'destroy'])->whereNumber('id');
+        Route::get('saved-reports/{id}/run', [SavedReportController::class, 'run'])->whereNumber('id');
+        Route::post('saved-reports/{id}/send', [SavedReportController::class, 'send'])->whereNumber('id')->middleware('throttle:10,1');
+        Route::get('goals', [GoalController::class, 'index']);
+        Route::post('goals', [GoalController::class, 'store']);
+        Route::patch('goals/{id}', [GoalController::class, 'update'])->whereNumber('id');
+        Route::delete('goals/{id}', [GoalController::class, 'destroy'])->whereNumber('id');
         Route::get('activities/feed', [ActivityController::class, 'feed']);
 
         // Leads

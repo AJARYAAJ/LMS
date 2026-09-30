@@ -8,10 +8,12 @@ use App\Models\AiAgent;
 use App\Models\AssignmentRule;
 use App\Models\Campaign;
 use App\Models\Deal;
+use App\Models\Goal;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\PipelineStage;
+use App\Models\SavedReport;
 use App\Models\Tag;
 use App\Models\Task;
 use App\Models\Team;
@@ -109,18 +111,24 @@ class DemoSeeder extends Seeder
                 $lead->activities()->update(['occurred_at' => $createdAt, 'created_at' => $createdAt]);
 
                 for ($n = 1, $touches = $faker->numberBetween(0, 4); $n <= $touches; $n++) {
-                    $type = $faker->randomElement(['call', 'email', 'meeting', 'email', 'call']);
+                    $type = $faker->randomElement(['call', 'email', 'meeting', 'email', 'call', 'sms', 'whatsapp']);
+                    $inbound = in_array($type, ['email', 'sms', 'whatsapp'], true) && $faker->boolean(30);
                     $when = $createdAt->copy()->addDays($n)->min(now());
                     Activity::create([
                         'subject_type' => 'lead', 'subject_id' => $lead->id, 'user_id' => $lead->owner_id,
                         'type' => $type,
-                        'title' => match ($type) {
-                            'call' => 'Discovery call', 'email' => 'Sent product overview', default => 'Demo meeting'
+                        'title' => match (true) {
+                            $inbound => 'Reply from '.$first,
+                            $type === 'call' => 'Discovery call',
+                            $type === 'email' => 'Sent product overview',
+                            $type === 'sms' => 'SMS follow-up',
+                            $type === 'whatsapp' => 'WhatsApp follow-up',
+                            default => 'Demo meeting',
                         },
                         'description' => $faker->sentence(12),
-                        'direction' => 'outbound',
-                        'outcome' => $faker->randomElement(['Connected', 'Left voicemail', 'Interested', 'Requested pricing', null]),
-                        'duration_minutes' => $type === 'email' ? null : $faker->numberBetween(5, 45),
+                        'direction' => $inbound ? 'inbound' : 'outbound',
+                        'outcome' => $type === 'call' || $type === 'meeting' ? $faker->randomElement(['Connected', 'Left voicemail', 'Interested', 'Requested pricing', null]) : null,
+                        'duration_minutes' => in_array($type, ['call', 'meeting'], true) ? $faker->numberBetween(5, 45) : null,
                         'occurred_at' => $when,
                     ]);
                     $lead->forceFill(['last_contacted_at' => $when])->saveQuietly();
@@ -173,6 +181,19 @@ class DemoSeeder extends Seeder
                     'expected_close_date' => now()->addDays(random_int(5, 60)),
                 ]);
             });
+
+            // Report studio examples (two pinned to the admin's dashboard) and this month's goals.
+            foreach ([
+                ['Revenue by owner this quarter', ['entity' => 'deals', 'metric' => 'won_amount', 'dimension' => 'owner', 'date_field' => 'closed', 'range' => 'this_quarter', 'chart' => 'bar'], true, 'weekly'],
+                ['Lead flow by source', ['entity' => 'leads', 'metric' => 'count', 'dimension' => 'created', 'split' => 'source', 'range' => 'last_90', 'chart' => 'stacked'], true, 'none'],
+                ['Conversion rate by industry', ['entity' => 'leads', 'metric' => 'conversion_rate', 'dimension' => 'industry', 'range' => 'last_90', 'chart' => 'bar'], false, 'monthly'],
+            ] as [$name, $spec, $pinned, $schedule]) {
+                SavedReport::create(['user_id' => $admin->id, 'name' => $name, 'spec' => $spec, 'is_shared' => true, 'pinned' => $pinned, 'schedule' => $schedule]);
+            }
+            Goal::create(['metric' => 'revenue_won', 'period' => 'month', 'target' => 150000, 'created_by' => $admin->id]);
+            Goal::create(['metric' => 'leads_converted', 'period' => 'quarter', 'target' => 30, 'created_by' => $admin->id]);
+            $reps->each(fn (User $rep) => Goal::create(['user_id' => $rep->id, 'metric' => 'calls_logged', 'period' => 'month', 'target' => 12, 'created_by' => $admin->id]));
+            $reps->take(2)->each(fn (User $rep) => Goal::create(['user_id' => $rep->id, 'metric' => 'revenue_won', 'period' => 'month', 'target' => 40000, 'created_by' => $admin->id]));
         });
     }
 }

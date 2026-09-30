@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\Lead;
+use App\Models\SavedReport;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Reports\ReportMailer;
 use App\Services\OrgMailer;
 use App\Support\Tenant;
 use Illuminate\Support\Facades\Artisan;
@@ -93,3 +95,31 @@ Artisan::command('notifications:digest', function (OrgMailer $mailer) {
 })->purpose('Send the morning email digest');
 
 Schedule::command('notifications:digest')->weekdays()->at('07:52');
+
+/*
+ * Scheduled report emails: weekly reports go out on Mondays, monthly ones on
+ * the 1st, each run with the owner's data visibility.
+ */
+Artisan::command('reports:send-scheduled', function (ReportMailer $mailer) {
+    $sent = 0;
+    SavedReport::withoutGlobalScopes()->where('schedule', '!=', 'none')->with('user')->chunkById(100, function ($reports) use ($mailer, &$sent) {
+        foreach ($reports as $report) {
+            if (! $report->user?->is_active || ! $report->isDue()) {
+                continue;
+            }
+            Tenant::run($report->organization_id, function () use ($report, $mailer, &$sent) {
+                try {
+                    $mailer->send($report);
+                    $report->forceFill(['last_sent_at' => now()])->save();
+                    $sent++;
+                } catch (Throwable $e) {
+                    report($e);
+                }
+            });
+        }
+    });
+
+    $this->info("Sent {$sent} scheduled reports.");
+})->purpose('Email saved reports that are due');
+
+Schedule::command('reports:send-scheduled')->dailyAt('06:43')->withoutOverlapping();
