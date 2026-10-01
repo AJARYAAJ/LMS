@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Lock, Mail } from 'lucide-react'
+import { Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { credentialsReceived } from '@/features/auth/authSlice'
-import { errorMessage, useLoginMutation } from '@/services/api'
+import { errorMessage, useLoginMutation, useTwoFactorChallengeMutation } from '@/services/api'
+import type { User } from '@/types'
 import { Button, Field, Input } from '@/components/ui'
 import { AuthLayout } from './AuthLayout'
 
@@ -20,20 +21,57 @@ export function LoginPage() {
   const location = useLocation()
   const token = useAppSelector((s) => s.auth.token)
   const [login, { isLoading, error }] = useLoginMutation()
+  const [verify, verifyState] = useTwoFactorChallengeMutation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [challenge, setChallenge] = useState<string | null>(null)
+  const [code, setCode] = useState('')
+  const [useRecovery, setUseRecovery] = useState(false)
 
   if (token) return <Navigate to="/" replace />
+
+  const done = (result: { token: string; user: User }) => {
+    dispatch(credentialsReceived(result))
+    navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     try {
       const result = await login({ email, password }).unwrap()
-      dispatch(credentialsReceived(result))
-      navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
+      if ('two_factor_required' in result) setChallenge(result.challenge)
+      else done(result)
     } catch {
       /* shown below */
     }
+  }
+
+  const submitCode = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!challenge) return
+    try {
+      done(await verify(useRecovery ? { challenge, recovery_code: code } : { challenge, code }).unwrap())
+    } catch {
+      /* shown below */
+    }
+  }
+
+  if (challenge) {
+    return (
+      <AuthLayout title="Two-step verification" subtitle={useRecovery ? 'Enter one of the recovery codes you saved.' : 'Enter the 6-digit code from your authenticator app.'}>
+        <form onSubmit={submitCode} className="space-y-4">
+          {verifyState.error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300" role="alert">{errorMessage(verifyState.error)}</div>}
+          <Field label={useRecovery ? 'Recovery code' : 'Authentication code'}>
+            <Input value={code} onChange={(e) => setCode(e.target.value)} inputMode={useRecovery ? 'text' : 'numeric'} autoComplete="one-time-code" placeholder={useRecovery ? 'abcde-fghij' : '123 456'} autoFocus icon={<ShieldCheck className="size-4" />} />
+          </Field>
+          <Button type="submit" size="lg" className="w-full" loading={verifyState.isLoading} disabled={code.trim().length < 6}>Verify</Button>
+          <div className="flex justify-between text-sm">
+            <button type="button" className="text-brand-600 hover:underline" onClick={() => { setUseRecovery((v) => !v); setCode('') }}>{useRecovery ? 'Use the authenticator app' : 'Use a recovery code'}</button>
+            <button type="button" className="text-slate-500 hover:underline" onClick={() => { setChallenge(null); setCode('') }}>Back</button>
+          </div>
+        </form>
+      </AuthLayout>
+    )
   }
 
   return (

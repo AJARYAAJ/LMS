@@ -18,6 +18,7 @@ import { SectionHeader } from '@/components/crm/ConditionBuilder'
 import { AssignmentRules, Automations, Integrations, ScoringRules, WebForms } from './RuleSections'
 import { LayoutEditor } from './LayoutEditor'
 import { PipelinesSection, ProductsSection } from './SalesSettings'
+import { FieldPermissionsSection } from './FieldPermissionsSection'
 import { IntegrationsHub } from './IntegrationsHub'
 
 const sections = [
@@ -32,6 +33,7 @@ const sections = [
   { key: 'tags', label: 'Tags', icon: TagIcon, group: 'Process' },
   { key: 'fields', label: 'Custom fields', icon: ListChecks, group: 'Process' },
   { key: 'layouts', label: 'Page layouts', icon: LayoutTemplate, group: 'Process' },
+  { key: 'field-permissions', label: 'Field permissions', icon: Shield, group: 'Workspace' },
   { key: 'assignment', label: 'Assignment rules', icon: Zap, group: 'Automation' },
   { key: 'scoring', label: 'Lead scoring', icon: Calculator, group: 'Automation' },
   { key: 'automations', label: 'Workflows', icon: Workflow, group: 'Automation' },
@@ -70,6 +72,7 @@ export function SettingsPage() {
           {active === 'qualification' && <QualificationSection />}
           {active === 'stages' && <PipelinesSection />}
           {active === 'products' && <ProductsSection />}
+          {active === 'field-permissions' && <FieldPermissionsSection />}
           {active === 'sources' && <SimpleList resource={resources.sources} title="Lead sources" description="Where leads come from. Used for routing, scoring and ROI reports." fields={['name', 'color', 'is_active']} />}
           {active === 'tags' && <SimpleList resource={resources.tags} title="Tags" description="Flexible labels for segmentation and automation conditions." fields={['name', 'color']} />}
           {active === 'fields' && <CustomFieldsSection />}

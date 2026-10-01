@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -95,12 +95,61 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
-    login: b.mutation<{ token: string; user: User }, { email: string; password: string }>({
+    login: b.mutation<{ token: string; user: User } | { two_factor_required: true; challenge: string }, { email: string; password: string }>({
       query: (body) => ({ url: 'auth/login', method: 'POST', body }),
+    }),
+    twoFactorChallenge: b.mutation<{ token: string; user: User }, { challenge: string; code?: string; recovery_code?: string }>({
+      query: (body) => ({ url: 'auth/two-factor-challenge', method: 'POST', body }),
+    }),
+    twoFactorStatus: b.query<{ enabled: boolean; confirmed_at: string | null; recovery_codes_left: number }, void>({
+      query: () => 'auth/two-factor',
+      transformResponse: (r: { data: never }) => r.data,
+      providesTags: ['TwoFactor'],
+    }),
+    twoFactorSetup: b.mutation<{ secret: string; uri: string }, void>({
+      query: () => ({ url: 'auth/two-factor', method: 'POST' }),
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    twoFactorConfirm: b.mutation<{ recovery_codes: string[] }, { code: string }>({
+      query: (body) => ({ url: 'auth/two-factor/confirm', method: 'POST', body }),
+      transformResponse: (r: { data: never }) => r.data,
+      invalidatesTags: ['TwoFactor', 'Me'],
+    }),
+    twoFactorRegenerate: b.mutation<{ recovery_codes: string[] }, { password: string }>({
+      query: (body) => ({ url: 'auth/two-factor/recovery-codes', method: 'POST', body }),
+      transformResponse: (r: { data: never }) => r.data,
+      invalidatesTags: ['TwoFactor'],
+    }),
+    twoFactorDisable: b.mutation<{ message: string }, { password: string }>({
+      query: (body) => ({ url: 'auth/two-factor', method: 'DELETE', body }),
+      invalidatesTags: ['TwoFactor', 'Me'],
+    }),
+    setConsent: b.mutation<{ consent: Record<string, ConsentEntry> }, { id: number; channel: string; status: string }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/consent`, method: 'PUT', body }),
+      transformResponse: (r: { data: never }) => r.data,
+      invalidatesTags: ['Lead', 'Activity', 'Inbox'],
+    }),
+    eraseLead: b.mutation<{ message: string }, { id: number; confirm: string }>({
+      query: ({ id, ...body }) => ({ url: `leads/${id}/erase`, method: 'POST', body }),
+      invalidatesTags: ['Lead', 'Leads', 'Activity', 'Note', 'Call'],
+    }),
+    unsubscribe: b.mutation<{ organization: string; email: string | null }, { lead: string; signature: string }>({
+      query: ({ lead, signature }) => ({ url: `public/unsubscribe/${lead}/${signature}`, method: 'POST' }),
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    fieldPermissions: b.query<FieldPermissionSettings, void>({
+      query: () => 'settings/field-permissions',
+      transformResponse: (r: { data: FieldPermissionSettings }) => r.data,
+      providesTags: ['FieldPermissions'],
+    }),
+    saveFieldPermissions: b.mutation<FieldPermissionSettings, { rules: FieldPermissionSettings['rules'] }>({
+      query: (body) => ({ url: 'settings/field-permissions', method: 'PUT', body }),
+      transformResponse: (r: { data: FieldPermissionSettings }) => r.data,
+      invalidatesTags: ['FieldPermissions', 'Meta', 'Lead', 'Leads', 'Deal', 'Reports'],
     }),
     register: b.mutation<{ token: string; user: User }, Record<string, string>>({
       query: (body) => ({ url: 'auth/register', method: 'POST', body }),
@@ -733,6 +782,8 @@ export const {
   usePublicQuoteQuery, useRespondQuoteMutation,
   useInboxQuery, useInboxSummaryQuery, useConversationQuery, useBookingPageQuery, useSaveBookingPageMutation, useLazySuggestBookingSlugQuery,
   usePublicBookingQuery, useBookMeetingMutation, useCalendarFeedQuery, useResetCalendarFeedMutation, useLogCallNotesMutation,
+  useTwoFactorChallengeMutation, useTwoFactorStatusQuery, useTwoFactorSetupMutation, useTwoFactorConfirmMutation, useTwoFactorRegenerateMutation,
+  useTwoFactorDisableMutation, useSetConsentMutation, useEraseLeadMutation, useUnsubscribeMutation, useFieldPermissionsQuery, useSaveFieldPermissionsMutation,
   useAskReportMutation, useDashboardsQuery, useSaveDashboardMutation, useDeleteDashboardMutation,
   useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api

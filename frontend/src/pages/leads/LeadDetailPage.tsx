@@ -19,6 +19,7 @@ import {
 import { Owner, PriorityBadge, RatingBadge } from '@/components/crm/Badges'
 import { Timeline } from '@/components/crm/Timeline'
 import { AiCallButton, CallDrawer, CallNotesButton } from '@/components/crm/Calls'
+import { PrivacyCard } from '@/components/crm/PrivacyCard'
 import { TaskFormModal } from '@/components/crm/TaskFormModal'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { ago, date, dateTime, friendlyDue, humanize, money } from '@/lib/format'
@@ -284,6 +285,7 @@ export function LeadDetailPage() {
           </Card>
 
           <ScoreCard leadId={lead.id} canWrite={write} />
+          <PrivacyCard lead={lead} />
         </div>
       </div>
 

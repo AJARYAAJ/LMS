@@ -32,9 +32,10 @@ const ForecastPage = lazyPage(() => import('@/pages/ForecastPage'), 'ForecastPag
 const PublicQuotePage = lazyPage(() => import('@/pages/PublicQuotePage'), 'PublicQuotePage')
 const InboxPage = lazyPage(() => import('@/pages/InboxPage'), 'InboxPage')
 const PublicBookingPage = lazyPage(() => import('@/pages/PublicBookingPage'), 'PublicBookingPage')
+const UnsubscribePage = lazyPage(() => import('@/pages/UnsubscribePage'), 'UnsubscribePage')
 const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage')
 
-const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, InboxPage, PublicBookingPage, NotFoundPage]
+const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, InboxPage, PublicBookingPage, UnsubscribePage, NotFoundPage]
 
 /** Load every page chunk once the browser is idle so navigation never waits. */
 function usePrefetchPages() {
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/f/:slug" element={<PublicFormPage />} />
         <Route path="/q/:token" element={<PublicQuotePage />} />
         <Route path="/book/:slug" element={<PublicBookingPage />} />
+        <Route path="/unsubscribe/:lead/:signature" element={<UnsubscribePage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="leads" element={<LeadsPage />} />

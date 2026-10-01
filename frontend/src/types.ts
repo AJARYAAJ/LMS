@@ -126,6 +126,9 @@ export interface CustomField {
 
 export interface Lead {
   id: number
+  consent?: Record<string, ConsentEntry> | null
+  erased_at?: string | null
+  conversion_likelihood?: number | null
   first_name: string
   last_name: string | null
   full_name: string
@@ -413,6 +416,7 @@ export interface Meta {
   qualification_criteria: { key: string; label: string }[]
   features: { ai: boolean; messaging_driver: string; voice: string | null; email_provider: string; voice_providers: { id: number; provider: string; name: string }[] }
   layouts: Record<LayoutEntity, PageLayout>
+  field_access?: Partial<Record<'lead' | 'deal', FieldAccess>>
   enums: {
     priorities: Priority[]
     ratings: Rating[]
@@ -885,3 +889,17 @@ export interface PublicBookingPage {
   organization: string
   slots: Record<string, string[]>
 }
+
+// ------------------------------------------------------------ security & privacy
+export interface ConsentEntry { status: 'granted' | 'denied' | 'unknown'; at?: string; source?: string }
+
+export type FieldLevel = 'edit' | 'read' | 'hidden'
+
+export interface FieldPermissionSettings {
+  roles: ('manager' | 'sales_rep' | 'viewer')[]
+  levels: FieldLevel[]
+  fields: Record<'lead' | 'deal', string[]>
+  rules: Partial<Record<'lead' | 'deal', Record<string, Partial<Record<'manager' | 'sales_rep' | 'viewer', FieldLevel>>>>>
+}
+
+export interface FieldAccess { hidden: string[]; readonly: string[] }

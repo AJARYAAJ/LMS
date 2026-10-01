@@ -431,12 +431,29 @@ export function Integrations() {
           <pre className="overflow-x-auto rounded-2xl bg-ink-950 p-4 text-xs text-emerald-300">{curl}</pre>
         </Card>
 
+        <Card title={<span className="flex items-center gap-2"><Zap className="size-4 text-amber-500" /> Zapier, Make & other automation tools</span>}
+          subtitle="Connect LeadFlow to thousands of apps with REST hooks. Use an API key above as the X-Api-Key header.">
+          <ul className="space-y-1.5 font-mono text-xs text-slate-600 dark:text-slate-300">
+            {[
+              ['GET', '/hooks/me', 'test the connection'],
+              ['POST', '/hooks/subscriptions', '{ event, target_url } — start sending an event'],
+              ['DELETE', '/hooks/subscriptions/{id}', 'stop sending'],
+              ['GET', '/hooks/samples/{event}', 'sample payloads for field mapping'],
+              ['GET', '/hooks/leads?since_id=', 'polling trigger: new leads'],
+              ['POST', '/capture/leads', 'action: create a lead'],
+            ].map(([m, path, what]) => (
+              <li key={path} className="flex flex-wrap gap-x-2"><span className="w-14 font-semibold text-brand-600">{m}</span><span>{API_URL}{path}</span><span className="font-sans text-slate-400">— {what}</span></li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-slate-500">Subscriptions appear in the webhook list below, marked “via app”.</p>
+        </Card>
+
         <Card title={<span className="flex items-center gap-2"><WebhookIcon className="size-4 text-fuchsia-500" /> Webhooks</span>} action={<Button size="xs" icon={<Plus className="size-3.5" />} onClick={() => setHookForm({ open: true, name: '', url: '', events: ['lead.created'] })}>Add webhook</Button>}>
           <ul className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
             {hooks?.map((h) => (
               <li key={h.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
                 <span className={clsx('size-2 rounded-full', h.last_status && h.last_status < 300 ? 'bg-emerald-500' : h.last_status ? 'bg-rose-500' : 'bg-slate-300')} />
-                <div className="min-w-0 flex-1"><p className="font-medium">{h.name}</p><p className="truncate font-mono text-xs text-slate-500">{h.url}</p></div>
+                <div className="min-w-0 flex-1"><p className="font-medium">{h.name}{(h as { source?: string }).source === 'rest_hook' && <Badge className="ml-2" color="#f59e0b">via app</Badge>}</p><p className="truncate font-mono text-xs text-slate-500">{h.url}</p></div>
                 <div className="flex flex-wrap gap-1">{h.events.map((e) => <Badge key={e}>{e}</Badge>)}</div>
                 <span className="text-xs text-slate-400">{h.last_triggered_at ? `${h.last_status} · ${ago(h.last_triggered_at)}` : 'not yet sent'}</span>
                 <Toggle checked={h.is_active} onChange={(v) => run(save({ ...resources.webhooks, id: h.id, body: { is_active: v } }), v ? 'Webhook enabled' : 'Webhook paused')} />

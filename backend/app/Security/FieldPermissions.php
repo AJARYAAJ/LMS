@@ -92,32 +92,34 @@ class FieldPermissions
     }
 
     /**
-     * Refuse changes to hidden or read-only fields. Unchanged values (forms send the
-     * whole record) and empty values on create are allowed.
+     * Writes from a role with restrictions: hidden fields are dropped (the person never
+     * saw them), read-only fields may be sent unchanged (forms send the whole record)
+     * but changing them is refused. Returns the data that may be saved.
      */
-    public static function guard(User $user, string $entity, array $data, ?Model $record = null): void
+    public static function guard(User $user, string $entity, array $data, ?Model $record = null): array
     {
         $rules = self::for($user, $entity);
-        $blocked = array_merge($rules['hidden'], $rules['readonly']);
-        if (! $blocked) {
-            return;
+        foreach ($rules['hidden'] as $field) {
+            if (str_starts_with($field, 'custom.')) {
+                unset($data['custom_fields'][substr($field, 7)]);
+            } else {
+                unset($data[$field]);
+            }
         }
         $denied = [];
-        foreach ($blocked as $field) {
+        foreach ($rules['readonly'] as $field) {
             [$present, $value, $current] = str_starts_with($field, 'custom.')
                 ? [array_key_exists(substr($field, 7), $data['custom_fields'] ?? []), $data['custom_fields'][substr($field, 7)] ?? null, $record?->custom_fields[substr($field, 7)] ?? null]
                 : [array_key_exists($field, $data), $data[$field] ?? null, $record?->getAttribute($field)];
-            if (! $present) {
-                continue;
-            }
-            $changed = $record ? self::normalize($value) !== self::normalize($current) : self::normalize($value) !== '';
-            if ($changed) {
+            if ($present && ($record ? self::normalize($value) !== self::normalize($current) : self::normalize($value) !== '')) {
                 $denied[] = $field;
             }
         }
         if ($denied) {
             throw ValidationException::withMessages(['fields' => 'Your role can’t change: '.implode(', ', array_map(fn ($f) => str_replace(['custom.', '_id', '_'], ['', '', ' '], $f), $denied)).'.']);
         }
+
+        return $data;
     }
 
     private static function normalize(mixed $value): string

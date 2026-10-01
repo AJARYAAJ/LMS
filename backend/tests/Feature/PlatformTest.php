@@ -135,9 +135,11 @@ class PlatformTest extends TestCase
 
         $this->as($rep)->patchJson("/api/v1/leads/{$id}", ['expected_value' => 1])->assertUnprocessable()->assertJsonValidationErrors('fields');
         $this->as($rep)->patchJson("/api/v1/leads/{$id}", ['expected_value' => 9000, 'company' => 'Changed'])->assertOk(); // unchanged locked value is fine
-        $this->as($rep)->patchJson("/api/v1/leads/{$id}", ['budget' => 1])->assertUnprocessable();
-        $this->as($rep)->postJson('/api/v1/leads', ['first_name' => 'New', 'budget' => 10])->assertUnprocessable();
-        $this->as($rep)->postJson('/api/v1/leads', ['first_name' => 'New'])->assertCreated();
+        // Hidden fields are ignored on write: the rep never saw them, so the stored value stays.
+        $this->as($rep)->patchJson("/api/v1/leads/{$id}", ['budget' => 1])->assertOk();
+        $this->as($admin)->getJson("/api/v1/leads/{$id}")->assertJsonPath('data.budget', '50000.00');
+        $this->as($rep)->postJson('/api/v1/leads', ['first_name' => 'New', 'expected_value' => 10])->assertUnprocessable();
+        $this->as($rep)->postJson('/api/v1/leads', ['first_name' => 'New', 'budget' => 10])->assertCreated()->assertJsonMissingPath('data.budget');
 
         $this->as($rep)->postJson('/api/v1/reports/run', ['spec' => ['entity' => 'leads', 'metric' => 'budget']])->assertUnprocessable();
         $kpis = array_column($this->as($rep)->getJson('/api/v1/reports/type/leads')->json('data.kpis'), 'label');

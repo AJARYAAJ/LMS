@@ -66,7 +66,7 @@ class LeadController extends Controller
     public function store(Request $request, DuplicateDetector $duplicates): JsonResponse
     {
         $data = $request->validate($this->rules());
-        FieldPermissions::guard($request->user(), 'lead', $data);
+        $data = FieldPermissions::guard($request->user(), 'lead', $data);
 
         if (! $request->boolean('allow_duplicate')) {
             $matches = $duplicates->find($data['email'] ?? null, $data['phone'] ?? null);
@@ -93,7 +93,7 @@ class LeadController extends Controller
     {
         $lead = $this->find($request, $id);
         $data = $request->validate($this->rules(true));
-        FieldPermissions::guard($request->user(), 'lead', $data, $lead);
+        $data = FieldPermissions::guard($request->user(), 'lead', $data, $lead);
         $this->restrictOwnership($request->user(), $data);
 
         $lead = $this->leads->update($lead, $data, $request->user());

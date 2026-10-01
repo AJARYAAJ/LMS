@@ -135,11 +135,12 @@ export function LayoutFields({ entity, meta, values, onChange, errors = {}, omit
 }) {
   if (!meta) return null
   const layout = layoutFor(meta, entity)
+  const access = meta.field_access?.[entity as 'lead' | 'deal']
 
   return (
     <div className="space-y-6">
       {layout.sections.map((section) => {
-        const fields = section.fields.filter((k) => !omit.includes(k) && fieldDef(entity, k, meta))
+        const fields = section.fields.filter((k) => !omit.includes(k) && fieldDef(entity, k, meta) && !access?.hidden.includes(k))
         if (!fields.length) return null
         return (
           <section key={section.title}>
@@ -149,9 +150,10 @@ export function LayoutFields({ entity, meta, values, onChange, errors = {}, omit
                 const def = fieldDef(entity, key, meta)!
                 const value = read(values, key)
                 const isRequired = required.includes(key) || !!def.custom?.is_required
+                const locked = !!access?.readonly.includes(key)
                 return (
-                  <Field key={key} label={def.label} required={isRequired} error={errors[key]} className={clsx(def.wide && 'sm:col-span-2 lg:col-span-3')}>
-                    <FieldInput entity={entity} fieldKey={key} def={def} value={value} meta={meta} extras={extras} placeholder={placeholders[key] ?? def.placeholder} required={isRequired} onChange={(v) => onChange(key, v)} />
+                  <Field key={key} label={def.label} required={isRequired} error={errors[key]} hint={locked ? 'Read-only for your role' : undefined} className={clsx(def.wide && 'sm:col-span-2 lg:col-span-3')}>
+                    <FieldInput entity={entity} fieldKey={key} def={def} value={value} meta={meta} extras={extras} placeholder={placeholders[key] ?? def.placeholder} required={isRequired} disabled={locked} onChange={(v) => onChange(key, v)} />
                   </Field>
                 )
               })}
@@ -163,7 +165,7 @@ export function LayoutFields({ entity, meta, values, onChange, errors = {}, omit
   )
 }
 
-function FieldInput({ def, value, meta, extras, placeholder, required, onChange }: {
+function FieldInput({ def, value, meta, extras, placeholder, required, disabled, onChange }: {
   entity: LayoutEntity
   fieldKey: string
   def: FieldDef & { custom?: CustomField }
@@ -172,9 +174,13 @@ function FieldInput({ def, value, meta, extras, placeholder, required, onChange 
   extras: LayoutExtras
   placeholder?: string
   required: boolean
+  disabled?: boolean
   onChange: (v: unknown) => void
 }) {
   const str = value === null || value === undefined ? '' : String(value)
+  if (disabled && def.kind !== 'tags') {
+    return <Input value={displayText(def, value, meta, extras)} disabled readOnly className="cursor-not-allowed opacity-70" />
+  }
 
   switch (def.kind) {
     case 'select':
@@ -230,8 +236,9 @@ export function LayoutDetails({ entity, meta, record, currency = 'USD', skip = [
   return (
     <div className="space-y-5">
       {layout.sections.map((section, i) => {
+        const hidden = meta.field_access?.[entity as 'lead' | 'deal']?.hidden ?? []
         const items = section.fields
-          .filter((k) => !skip.includes(k))
+          .filter((k) => !skip.includes(k) && !hidden.includes(k))
           .map((k) => ({ key: k, def: fieldDef(entity, k, meta) }))
           .filter((x): x is { key: string; def: FieldDef & { custom?: CustomField } } => !!x.def && x.def.kind !== 'textarea')
           .map(({ key, def }) => ({ label: def.label, value: displayValue(def, read(record, key), meta, extras, currency) }))
@@ -271,5 +278,14 @@ function displayValue(def: FieldDef & { custom?: CustomField }, value: unknown, 
   if (def.money) return money(value as string, currency)
   if (def.kind === 'datetime') return friendlyDue(String(value))
   if (def.kind === 'date') return date(String(value))
+  return String(value)
+}
+
+/** Plain-text value for a locked (read-only) control. */
+function displayText(def: FieldDef & { custom?: CustomField }, value: unknown, meta: Meta, extras: LayoutExtras): string {
+  if (value === null || value === undefined || value === '') return ''
+  if (def.custom?.type === 'boolean') return value === true ? 'Yes' : 'No'
+  if (def.kind === 'select' && def.options) return def.options(meta, extras).find((o) => String(o.value) === String(value))?.label ?? String(value)
+  if (def.kind === 'datetime') return friendlyDue(String(value))
   return String(value)
 }

@@ -160,7 +160,7 @@ class DealController extends ResourceController
 
     protected function prepare(array $data, Request $request, ?Model $record = null): array
     {
-        FieldPermissions::guard($request->user(), 'deal', $data, $record);
+        $data = FieldPermissions::guard($request->user(), 'deal', $data, $record);
         if (! $record) {
             $data['owner_id'] ??= $request->user()->id;
             $data['currency'] ??= $request->user()->organization->currency;
