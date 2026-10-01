@@ -251,3 +251,11 @@
   --chart-axis: #64748b;
   --chart-gap: #121230;
 }
+
+/* ---------- printing a quote: only the document ---------- */
+@media print {
+  body * { visibility: hidden !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area { position: absolute; inset: 0; padding: 0; }
+  .quote-document { box-shadow: none !important; }
+}

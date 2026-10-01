@@ -103,6 +103,7 @@ export interface Campaign {
 
 export interface PipelineStage {
   id: number
+  pipeline_id?: number | null
   name: string
   probability: number
   display_order: number
@@ -269,6 +270,9 @@ export interface Deal {
   contact_id: number | null
   lead_id: number | null
   pipeline_stage_id: number | null
+  pipeline_id?: number | null
+  forecast_category?: ForecastCategory | null
+  forecast_override?: boolean
   owner_id: number | null
   amount: string
   currency: string
@@ -401,6 +405,8 @@ export interface Meta {
   teams: Pick<Team, 'id' | 'name' | 'color'>[]
   users: UserLite[]
   stages: PipelineStage[]
+  pipelines: Pick<Pipeline, 'id' | 'name' | 'is_default'>[]
+  products: Pick<Product, 'id' | 'name' | 'sku' | 'unit_price' | 'billing' | 'description'>[]
   custom_fields: CustomField[]
   email_templates: Pick<EmailTemplate, 'id' | 'name' | 'category' | 'subject' | 'body'>[]
   sequences: Pick<Sequence, 'id' | 'name' | 'description' | 'steps'>[]
@@ -502,6 +508,7 @@ export interface Insights {
   next_action: { title: string; type: string; reason: string }
   signals: { tone: 'positive' | 'warning' | 'negative'; text: string }[]
   qualification: { percent: number; missing: string[] }
+  prediction?: ConversionPrediction | null
 }
 
 export interface AiBrief {
@@ -741,4 +748,99 @@ export interface AskAnswer {
   title: string
   interpreter: 'claude' | 'rules'
   result: ReportResult
+}
+
+// ------------------------------------------------------------ sales tools
+export type ForecastCategory = 'pipeline' | 'best_case' | 'commit' | 'closed' | 'omitted'
+
+export interface Pipeline {
+  id: number
+  name: string
+  is_default: boolean
+  display_order: number
+  deals_count?: number
+  stages_count?: number
+}
+
+export interface Product {
+  id: number
+  name: string
+  sku: string | null
+  description: string | null
+  unit_price: number
+  billing: 'one_time' | 'monthly' | 'yearly'
+  is_active: boolean
+}
+
+export interface QuoteItem {
+  id?: number
+  product_id?: number | null
+  name: string
+  description?: string | null
+  quantity: number
+  unit_price: number
+  discount_percent: number
+  total?: number
+}
+
+export interface Quote {
+  id: number
+  deal_id: number
+  number: string
+  title: string
+  status: 'draft' | 'sent' | 'accepted' | 'declined' | 'expired'
+  currency: string
+  discount_percent: number
+  tax_percent: number
+  subtotal: number
+  total: number
+  valid_until: string | null
+  notes: string | null
+  sent_at: string | null
+  viewed_at: string | null
+  responded_at: string | null
+  signed_name: string | null
+  decline_reason: string | null
+  items: QuoteItem[]
+  creator?: { id: number; name: string } | null
+  public_url?: string
+  created_at: string
+}
+
+export interface PublicQuote extends Pick<Quote, 'number' | 'title' | 'status' | 'currency' | 'discount_percent' | 'tax_percent' | 'subtotal' | 'total' | 'valid_until' | 'notes' | 'signed_name' | 'responded_at' | 'created_at'> {
+  items: QuoteItem[]
+  organization: { name: string; website: string | null; phone: string | null }
+  prepared_by: { name: string; email: string } | null
+  customer: string | null
+}
+
+export interface ForecastRow {
+  closed: number
+  commit: number
+  best_case: number
+  pipeline: number
+  omitted: number
+  projected: number
+  best_projection: number
+  weighted: number
+  quota: number | null
+  attainment: number | null
+  deals: number
+}
+
+export interface Forecast {
+  period: string
+  period_label: string
+  from: string
+  to: string
+  total: ForecastRow
+  reps: (ForecastRow & { owner: UserLite | null })[]
+  deals: (Pick<Deal, 'id' | 'name' | 'amount' | 'currency' | 'probability' | 'status' | 'forecast_category' | 'forecast_override' | 'expected_close_date' | 'closed_at' | 'owner_id' | 'owner'> & { stage: Pick<PipelineStage, 'id' | 'name' | 'color'> | null })[]
+}
+
+export interface ConversionPrediction {
+  likelihood: number
+  base: number
+  factors: { label: string; effect: number }[]
+  trained_on: number
 }

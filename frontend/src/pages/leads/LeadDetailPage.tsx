@@ -24,7 +24,7 @@ import { ActivityModal } from '@/components/crm/ActivityModal'
 import { ago, date, dateTime, friendlyDue, humanize, money } from '@/lib/format'
 import { RATING_META } from '@/lib/constants'
 import { LayoutDetails, type LayoutValues } from '@/lib/layouts'
-import type { LeadStatus } from '@/types'
+import type { ConversionPrediction, LeadStatus } from '@/types'
 import { LeadFormModal } from './LeadFormModal'
 import { AiBriefPanel, AssignModal, ConvertModal, EmailComposerModal, EnrollModal, LostModal, MergeModal, MessageModal } from './LeadModals'
 
@@ -215,6 +215,7 @@ export function LeadDetailPage() {
                   </div>
                 </div>
               </div>
+              {insights.prediction && <PredictionPanel prediction={insights.prediction} />}
               <AiBriefPanel leadId={lead.id} />
               {!!insights.signals.length && (
                 <ul className="mt-4 flex flex-wrap gap-2">
@@ -515,6 +516,31 @@ function HistoryTab({ leadId }: { leadId: number }) {
       </ol>
       {!data?.length && <EmptyState title="No stage changes yet" />}
       <p className="mt-6 flex items-center gap-1.5 text-xs text-slate-400"><Building2 className="size-3.5" /> Full field-level history is in the audit log.</p>
+    </div>
+  )
+}
+
+/** Predicted chance to convert, learned from this organization's won and lost leads. */
+function PredictionPanel({ prediction }: { prediction: ConversionPrediction }) {
+  const diff = prediction.likelihood - prediction.base
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200/70 p-4 dark:border-white/10">
+      <div className="flex items-center gap-3">
+        <ScoreRing score={prediction.likelihood} size={52} />
+        <div>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">{prediction.likelihood}% likely to convert</p>
+          <p className="text-xs text-slate-500">{diff === 0 ? 'Same as' : `${Math.abs(diff)} pts ${diff > 0 ? 'above' : 'below'}`} your average of {prediction.base}% · learned from {prediction.trained_on} closed leads</p>
+        </div>
+      </div>
+      {!!prediction.factors.length && (
+        <ul className="flex flex-1 flex-wrap justify-end gap-1.5" aria-label="What drives this prediction">
+          {prediction.factors.map((f) => (
+            <li key={f.label} className={clsx('rounded-full px-2.5 py-1 text-xs font-medium', f.effect > 0 ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-rose-500/10 text-rose-700 dark:text-rose-300')}>
+              {f.effect > 0 ? '+' : '−'}{Math.abs(f.effect)} pts · {f.label}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

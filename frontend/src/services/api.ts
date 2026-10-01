@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -34,7 +34,7 @@ const clean = (params?: Query) =>
 /** A settings resource with standard list/create/update/delete endpoints. */
 type SettingsTag =
   | 'LeadStatus' | 'LeadSource' | 'PipelineStage' | 'Tag' | 'CustomField' | 'Team' | 'AssignmentRule'
-  | 'ScoringRule' | 'AutomationRule' | 'Webhook' | 'Campaign' | 'User' | 'EmailTemplate' | 'Sequence' | 'WebForm' | 'AiAgent'
+  | 'ScoringRule' | 'AutomationRule' | 'Webhook' | 'Campaign' | 'User' | 'EmailTemplate' | 'Sequence' | 'WebForm' | 'AiAgent' | 'Pipeline' | 'Product'
 
 export interface DashboardData {
   kpis: {
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -447,6 +447,46 @@ export const api = createApi({
       transformResponse: (r: { data: DealColumn[] }) => r.data,
       providesTags: ['Deal'],
     }),
+    forecast: b.query<Forecast, { period?: string; pipeline_id?: number | string }>({
+      query: (params) => ({ url: 'deals/forecast', params: clean(params) }),
+      transformResponse: (r: { data: Forecast }) => r.data,
+      providesTags: ['Deal', 'Goal'],
+    }),
+    quotes: b.query<Quote[], number>({
+      query: (dealId) => `deals/${dealId}/quotes`,
+      transformResponse: (r: { data: Quote[] }) => r.data,
+      providesTags: ['Quote'],
+    }),
+    quote: b.query<Quote, number>({
+      query: (id) => `quotes/${id}`,
+      transformResponse: (r: { data: Quote }) => r.data,
+      providesTags: ['Quote'],
+    }),
+    saveQuote: b.mutation<Quote, { id?: number; dealId: number; body: Record<string, unknown> }>({
+      query: ({ id, dealId, body }) => ({ url: id ? `quotes/${id}` : `deals/${dealId}/quotes`, method: id ? 'PUT' : 'POST', body }),
+      transformResponse: (r: { data: Quote }) => r.data,
+      invalidatesTags: ['Quote', 'Activity'],
+    }),
+    sendQuote: b.mutation<{ message: string }, { id: number; to?: string }>({
+      query: ({ id, ...body }) => ({ url: `quotes/${id}/send`, method: 'POST', body }),
+      invalidatesTags: ['Quote', 'Activity'],
+    }),
+    duplicateQuote: b.mutation<Quote, number>({
+      query: (id) => ({ url: `quotes/${id}/duplicate`, method: 'POST' }),
+      invalidatesTags: ['Quote'],
+    }),
+    deleteQuote: b.mutation<void, number>({
+      query: (id) => ({ url: `quotes/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Quote'],
+    }),
+    publicQuote: b.query<PublicQuote, string>({
+      query: (token) => `public/quotes/${token}`,
+      transformResponse: (r: { data: PublicQuote }) => r.data,
+    }),
+    respondQuote: b.mutation<PublicQuote, { token: string; accept: boolean; name?: string; agree?: boolean; reason?: string }>({
+      query: ({ token, ...body }) => ({ url: `public/quotes/${token}/respond`, method: 'POST', body }),
+      transformResponse: (r: { data: PublicQuote }) => r.data,
+    }),
     deal: b.query<Deal, number>({ query: (id) => `deals/${id}`, transformResponse: (r: { data: Deal }) => r.data, providesTags: ['Deal'] }),
     saveDeal: b.mutation<Deal, Partial<Deal>>({
       query: ({ id, ...body }) => ({ url: id ? `deals/${id}` : 'deals', method: id ? 'PATCH' : 'POST', body }),
@@ -623,6 +663,8 @@ export const {
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,
   useSaveReportMutation, useDeleteReportMutation, useSendReportMutation, useGoalsQuery, useSaveGoalMutation, useDeleteGoalMutation,
+  useForecastQuery, useQuotesQuery, useQuoteQuery, useSaveQuoteMutation, useSendQuoteMutation, useDuplicateQuoteMutation, useDeleteQuoteMutation,
+  usePublicQuoteQuery, useRespondQuoteMutation,
   useAskReportMutation, useDashboardsQuery, useSaveDashboardMutation, useDeleteDashboardMutation,
   useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
@@ -646,6 +688,8 @@ export const resources = {
   sequences: { resource: 'sequences', tag: 'Sequence' } as SettingsResource<Sequence>,
   webForms: { resource: 'web-forms', tag: 'WebForm' } as SettingsResource<WebForm>,
   aiAgents: { resource: 'ai-agents', tag: 'AiAgent' } as SettingsResource<AiAgent>,
+  pipelines: { resource: 'pipelines', tag: 'Pipeline' } as SettingsResource<Pipeline>,
+  products: { resource: 'products', tag: 'Product' } as SettingsResource<Product>,
 }
 
 /** Typed wrapper around the generic settings list query. */

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  Building, Cable, LayoutTemplate, PlugZap, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, ListChecks, Pencil, Plus, Recycle, Route, Settings,
+  Building, Cable, LayoutTemplate, PlugZap, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, Package, ListChecks, Pencil, Plus, Recycle, Route, Settings,
   Shield, Tag as TagIcon, Trash2, Users, Workflow, Zap,
 } from 'lucide-react'
 import { useAction, useCurrentUser } from '@/app/hooks'
@@ -17,6 +17,7 @@ import type { CustomField, LeadSource, LeadStatus, PipelineStage, Tag, Team, Use
 import { SectionHeader } from '@/components/crm/ConditionBuilder'
 import { AssignmentRules, Automations, Integrations, ScoringRules, WebForms } from './RuleSections'
 import { LayoutEditor } from './LayoutEditor'
+import { PipelinesSection, ProductsSection } from './SalesSettings'
 import { IntegrationsHub } from './IntegrationsHub'
 
 const sections = [
@@ -25,7 +26,8 @@ const sections = [
   { key: 'teams', label: 'Teams', icon: Shield, group: 'Workspace' },
   { key: 'statuses', label: 'Lifecycle & blueprint', icon: GitBranch, group: 'Process' },
   { key: 'qualification', label: 'Qualification', icon: ClipboardCheck, group: 'Process' },
-  { key: 'stages', label: 'Deal pipeline', icon: Layers, group: 'Process' },
+  { key: 'stages', label: 'Deal pipelines', icon: Layers, group: 'Process' },
+  { key: 'products', label: 'Products & prices', icon: Package, group: 'Process' },
   { key: 'sources', label: 'Lead sources', icon: Route, group: 'Process' },
   { key: 'tags', label: 'Tags', icon: TagIcon, group: 'Process' },
   { key: 'fields', label: 'Custom fields', icon: ListChecks, group: 'Process' },
@@ -66,7 +68,8 @@ export function SettingsPage() {
           {active === 'teams' && <TeamsSection />}
           {active === 'statuses' && <StatusesSection />}
           {active === 'qualification' && <QualificationSection />}
-          {active === 'stages' && <SimpleList resource={resources.stages} title="Deal pipeline" description="Stages and win probabilities used for weighted forecasting." fields={['name', 'probability', 'color', 'is_won', 'is_lost']} />}
+          {active === 'stages' && <PipelinesSection />}
+          {active === 'products' && <ProductsSection />}
           {active === 'sources' && <SimpleList resource={resources.sources} title="Lead sources" description="Where leads come from. Used for routing, scoring and ROI reports." fields={['name', 'color', 'is_active']} />}
           {active === 'tags' && <SimpleList resource={resources.tags} title="Tags" description="Flexible labels for segmentation and automation conditions." fields={['name', 'color']} />}
           {active === 'fields' && <CustomFieldsSection />}

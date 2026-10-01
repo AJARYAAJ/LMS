@@ -3,8 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import { ArrowLeft, Building2, Check, Pencil, Phone, Target, Trash2, Trophy, User } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
-import { useDealQuery, useDeleteDealMutation, useMetaQuery, useMoveDealMutation } from '@/services/api'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, PageLoader } from '@/components/ui'
+import { useDealQuery, useDeleteDealMutation, useMetaQuery, useMoveDealMutation, useSaveDealMutation } from '@/services/api'
+import { Badge, Button, Card, ConfirmDialog, EmptyState, PageLoader, Select } from '@/components/ui'
+import { QuotesPanel } from '@/components/crm/Quotes'
+import { FORECAST_LABEL } from '@/lib/constants'
 import { RecordPanels } from '@/components/crm/RecordPanels'
 import { LayoutDetails, type LayoutValues } from '@/lib/layouts'
 import { ActivityModal } from '@/components/crm/ActivityModal'
@@ -20,6 +22,8 @@ export function DealDetailPage() {
   const { data: deal, isLoading } = useDealQuery(id)
   const { data: meta } = useMetaQuery()
   const [move] = useMoveDealMutation()
+  const [save] = useSaveDealMutation()
+  const orgName = useAppSelector((s) => s.auth.user?.organization?.name ?? '')
   const [remove, removeState] = useDeleteDealMutation()
   const [modal, setModal] = useState<null | 'edit' | 'activity' | 'delete'>(null)
   const [lostStage, setLostStage] = useState<number | null>(null)
@@ -65,7 +69,7 @@ export function DealDetailPage() {
 
       <section className="card p-2">
         <ol className="flex gap-1 overflow-x-auto">
-          {meta?.stages.map((s) => {
+          {meta?.stages.filter((s) => !deal.pipeline_id || s.pipeline_id === deal.pipeline_id).map((s) => {
             const current = s.id === deal.pipeline_stage_id
             return (
               <li key={s.id} className="min-w-28 flex-1">
@@ -82,7 +86,21 @@ export function DealDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <RecordPanels type="deals" id={deal.id} name={deal.name} />
+        <div className="space-y-6">
         <Card title="Details">
+          {deal.status === 'open' && (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl bg-slate-900/[0.03] p-3 dark:bg-white/[0.04]">
+              <div>
+                <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Forecast</p>
+                <p className="text-xs text-slate-400">{deal.forecast_override ? 'Set by hand' : 'From stage probability'}</p>
+              </div>
+              <Select className="w-auto" value={deal.forecast_override ? deal.forecast_category ?? 'pipeline' : 'auto'} disabled={!write} aria-label="Forecast category"
+                onChange={(e) => run(save({ id: deal.id, forecast_category: e.target.value as never }), 'Forecast updated')}>
+                <option value="auto">Automatic ({FORECAST_LABEL[deal.forecast_category ?? 'pipeline']})</option>
+                {(['pipeline', 'best_case', 'commit', 'omitted'] as const).map((c) => <option key={c} value={c}>{FORECAST_LABEL[c]}</option>)}
+              </Select>
+            </div>
+          )}
           <LayoutDetails
             entity="deal"
             meta={meta}
@@ -100,6 +118,8 @@ export function DealDetailPage() {
             ]}
           />
         </Card>
+        <QuotesPanel deal={deal} organizationName={orgName} />
+        </div>
       </div>
 
       <LostDealModal open={lostStage !== null} onClose={() => setLostStage(null)} onConfirm={async (reason) => { if (lostStage && (await run(move({ id: deal.id, pipeline_stage_id: lostStage, lost_reason: reason }), 'Deal marked lost'))) setLostStage(null) }} />

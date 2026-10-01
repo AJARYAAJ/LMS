@@ -28,9 +28,11 @@ const AuditLogPage = lazyPage(() => import('@/pages/AuditLogPage'), 'AuditLogPag
 const ProfilePage = lazyPage(() => import('@/pages/ProfilePage'), 'ProfilePage')
 const PublicFormPage = lazyPage(() => import('@/pages/PublicFormPage'), 'PublicFormPage')
 const NotificationsPage = lazyPage(() => import('@/pages/NotificationsPage'), 'NotificationsPage')
+const ForecastPage = lazyPage(() => import('@/pages/ForecastPage'), 'ForecastPage')
+const PublicQuotePage = lazyPage(() => import('@/pages/PublicQuotePage'), 'PublicQuotePage')
 const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage')
 
-const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, NotFoundPage]
+const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, NotFoundPage]
 
 /** Load every page chunk once the browser is idle so navigation never waits. */
 function usePrefetchPages() {
@@ -51,6 +53,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/f/:slug" element={<PublicFormPage />} />
+        <Route path="/q/:token" element={<PublicQuotePage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="leads" element={<LeadsPage />} />
@@ -59,6 +62,7 @@ export default function App() {
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="deals" element={<DealsPage />} />
           <Route path="deals/:id" element={<DealDetailPage />} />
+          <Route path="forecast" element={<ForecastPage />} />
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="contacts/:id" element={<ContactDetailPage />} />
           <Route path="accounts" element={<AccountsPage />} />

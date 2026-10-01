@@ -79,7 +79,11 @@ export const FIELD_DEFS: Record<LayoutEntity, Record<string, FieldDef>> = {
   deal: {
     name: { label: 'Deal name', kind: 'text', wide: true },
     amount: { label: 'Amount', kind: 'number', money: true },
-    pipeline_stage_id: { label: 'Stage', kind: 'select', options: (m) => m.stages.map((s) => ({ value: s.id, label: `${s.name} · ${s.probability}%` })) },
+    pipeline_stage_id: {
+      label: 'Stage', kind: 'select',
+      // With several pipelines, prefix each stage with its pipeline.
+      options: (m) => m.stages.map((s) => ({ value: s.id, label: `${(m.pipelines?.length ?? 0) > 1 ? `${m.pipelines.find((p) => p.id === s.pipeline_id)?.name ?? ''} › ` : ''}${s.name} · ${s.probability}%` })),
+    },
     account_id: { label: 'Account', kind: 'select', options: (_m, x) => x.accounts ?? [] },
     contact_id: { label: 'Contact', kind: 'select', options: (_m, x) => x.contacts ?? [] },
     owner_id: { label: 'Owner', kind: 'select', options: users },

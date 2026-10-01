@@ -39,3 +39,7 @@ export const OPERATOR_LABELS: Record<string, string> = {
 export const VALUELESS_OPERATORS = ['is_empty', 'is_not_empty', 'business_email']
 
 export const COLOR_SWATCHES = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#f59e0b', '#10b981', '#14b8a6', '#0ea5e9', '#64748b']
+
+export const FORECAST_LABEL: Record<string, string> = {
+  pipeline: 'Pipeline', best_case: 'Best case', commit: 'Commit', closed: 'Closed won', omitted: 'Omitted',
+}

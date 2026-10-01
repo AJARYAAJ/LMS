@@ -1,9 +1,9 @@
 import { useState, type DragEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { CalendarDays, Kanban, List, Plus, Search, Trophy } from 'lucide-react'
+import { CalendarDays, Kanban, List, Plus, Search, TrendingUp, Trophy } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
-import { useDealBoardQuery, useDealsQuery, useMoveDealMutation } from '@/services/api'
+import { useDealBoardQuery, useDealsQuery, useMetaQuery, useMoveDealMutation } from '@/services/api'
 import { Avatar, Badge, Button, EmptyState, Input, PageHeader, Pagination, Segmented, Select, Skeleton, StatCard } from '@/components/ui'
 import { date, money } from '@/lib/format'
 import { DealFormModal, LostDealModal } from './DealFormModal'
@@ -21,8 +21,12 @@ export function DealsPage() {
   const [dragOver, setDragOver] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [lostMove, setLostMove] = useState<{ id: number; stageId: number } | null>(null)
-  const board = useDealBoardQuery({ search, owner_id: owner }, { skip: view !== 'board' })
-  const list = useDealsQuery({ search, owner_id: owner, status, page }, { skip: view !== 'list' })
+  const { data: meta } = useMetaQuery()
+  const [pipelineId, setPipelineId] = useState<number | null>(null)
+  const pipelines = meta?.pipelines ?? []
+  const activePipeline = pipelineId ?? pipelines.find((p) => p.is_default)?.id ?? pipelines[0]?.id
+  const board = useDealBoardQuery({ search, owner_id: owner, pipeline_id: activePipeline }, { skip: view !== 'board' || !meta })
+  const list = useDealsQuery({ search, owner_id: owner, status, page, pipeline_id: pipelines.length > 1 ? activePipeline : undefined }, { skip: view !== 'list' || !meta })
   const [move] = useMoveDealMutation()
 
   const totals = (board.data ?? []).reduce((acc, c) => ({
@@ -45,6 +49,7 @@ export function DealsPage() {
     <div>
       <PageHeader icon={<Kanban />} title="Pipeline" description="Drag deals between stages. Probabilities update automatically."
         actions={<>
+          <Link to="/forecast" className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-brand-600 hover:bg-brand-500/10"><TrendingUp className="size-4" />Forecast</Link>
           <Segmented value={view} onChange={setView} options={[{ value: 'board', label: 'Board', icon: <Kanban /> }, { value: 'list', label: 'List', icon: <List /> }]} />
           {write && <Button size="sm" icon={<Plus className="size-4" />} onClick={() => setShowForm(true)}>New deal</Button>}
         </>}
@@ -56,6 +61,15 @@ export function DealsPage() {
           <StatCard label="Weighted forecast" value={money(totals.weighted, currency, true)} hint="amount × probability" accent="#0ea5e9" />
           <StatCard label="Won" value={money(totals.won, currency, true)} icon={<Trophy />} accent="#10b981" />
           <StatCard label="Avg. deal size" value={money(totals.count ? totals.open / totals.count : 0, currency, true)} accent="#d946ef" />
+        </div>
+      )}
+
+      {pipelines.length > 1 && (
+        <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Pipelines">
+          {pipelines.map((p) => (
+            <button key={p.id} role="tab" aria-selected={p.id === activePipeline} onClick={() => setPipelineId(p.id)}
+              className={clsx('chip transition', p.id === activePipeline && 'border-brand-400 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-200')}>{p.name}</button>
+          ))}
         </div>
       )}
 
