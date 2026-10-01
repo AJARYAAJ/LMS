@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ConnectedAccount;
 use App\Models\EmailTemplate;
 use App\Models\Lead;
 use App\Models\User;
@@ -57,7 +58,12 @@ class EmailComposer
             $body .= "\n\n—\nDon't want these emails? Unsubscribe: ".$lead->unsubscribeUrl();
         }
 
-        $provider = $this->mailer->send($lead->organization_id, $lead->email, $lead->full_name, $subject, $body, $sender ? [$sender->email, $sender->name] : null);
+        // From the person's own Gmail / Outlook when connected (replies come back to them); otherwise the organization's email vendor.
+        $account = ConnectedAccount::mailFor($sender);
+        $mailbox = $account ? app(Mailbox::class) : null;
+        $provider = $account && $mailbox->safely($account, fn () => $mailbox->send($account, $lead->email, $lead->full_name, $subject, $body) ?? true)
+            ? "{$account->provider}_mailbox"
+            : $this->mailer->send($lead->organization_id, $lead->email, $lead->full_name, $subject, $body, $sender ? [$sender->email, $sender->name] : null);
 
         $this->activities->record($lead, 'email', $subject, [
             'description' => $body,

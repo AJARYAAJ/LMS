@@ -9,6 +9,7 @@ import { ROLE_LABELS } from '@/lib/constants'
 import { NotificationPreferences } from '@/components/crm/NotificationPreferences'
 import { BookingPageCard, CalendarFeedCard } from '@/components/crm/SchedulingSettings'
 import { TwoFactorCard } from '@/components/crm/SecuritySettings'
+import { ConnectedAccountsCard } from '@/components/crm/ConnectedAccounts'
 
 export function ProfilePage() {
   const run = useAction()
@@ -66,6 +67,7 @@ export function ProfilePage() {
         </div>
       </div>
       <div className="mt-6"><NotificationPreferences /></div>
+      <div className="mt-6"><ConnectedAccountsCard /></div>
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]"><BookingPageCard /><div className="space-y-6"><TwoFactorCard /><CalendarFeedCard /></div></div>
     </div>
   )

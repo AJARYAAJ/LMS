@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Broadcast;
+use App\Models\ConnectedAccount;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\SavedReport;
@@ -11,6 +12,7 @@ use App\Reports\ReportEngine;
 use App\Reports\ReportMailer;
 use App\Services\BroadcastService;
 use App\Services\ConversionPredictor;
+use App\Services\Mailbox;
 use App\Services\OrgMailer;
 use App\Support\Tenant;
 use Illuminate\Support\Facades\Artisan;
@@ -211,3 +213,19 @@ Artisan::command('broadcasts:run', function (BroadcastService $broadcasts) {
 })->purpose('Launch scheduled email campaigns and finish A/B tests');
 
 Schedule::command('broadcasts:run')->everyFiveMinutes()->withoutOverlapping();
+
+/*
+ * Connected Gmail / Outlook mailboxes: bring emails exchanged with leads onto
+ * their timelines and into the inbox.
+ */
+Artisan::command('mailboxes:sync', function (Mailbox $mailbox) {
+    $added = 0;
+    ConnectedAccount::withoutGlobalScopes()->where('sync_mail', true)->with('user')->get()
+        ->filter(fn (ConnectedAccount $a) => $a->user?->is_active)
+        ->each(function (ConnectedAccount $account) use ($mailbox, &$added) {
+            $added += (int) $mailbox->safely($account, fn () => $mailbox->syncMail($account));
+        });
+    $this->info("Added {$added} emails.");
+})->purpose('Sync connected mailboxes');
+
+Schedule::command('mailboxes:sync')->everyFiveMinutes()->withoutOverlapping();

@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\BookingPage;
+use App\Models\ConnectedAccount;
 use App\Models\Task;
 use App\Models\Touchpoint;
 use App\Notifications\AppNotification;
 use App\Services\ActivityRecorder;
 use App\Services\DuplicateDetector;
 use App\Services\LeadService;
+use App\Services\Mailbox;
 use App\Support\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -125,6 +127,10 @@ class BookingController extends Controller
                 'description' => $data['notes'] ?? null, 'direction' => 'inbound', 'meta' => ['booking_page' => $page->slug, 'start' => $start->toIso8601String()],
             ]);
             $lead->forceFill(['next_follow_up_at' => $start])->saveQuietly();
+            if ($account = ConnectedAccount::calendarFor($page->user_id)) {
+                $mailbox = app(Mailbox::class);
+                $mailbox->safely($account, fn () => $mailbox->createEvent($account, "{$page->title} — {$lead->full_name}", $start, $page->duration_minutes, trim(($data['notes'] ?? '')."\n\nBooked through LeadFlow."), $lead->email));
+            }
             $page->user->notify(new AppNotification("New meeting: {$lead->full_name}", "{$page->title} on {$local->format('D M j, H:i')}".($lead->company ? " · {$lead->company}" : ''), "/leads/{$lead->id}", 'booking'));
 
             return ['start' => $start->toIso8601String(), 'local' => $local->format('l, F j \a\t H:i'), 'timezone' => $page->timezone];

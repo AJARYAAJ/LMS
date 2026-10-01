@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\CalendarFeedController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\CallNotesController;
+use App\Http\Controllers\Api\ConnectedAccountController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DashboardBuilderController;
 use App\Http\Controllers\Api\DashboardController;
@@ -50,6 +51,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/sso/exchange', [AuthController::class, 'ssoExchange']);
     });
     Route::get('sso/callback', [SsoController::class, 'callback'])->middleware('throttle:30,1');
+    Route::get('connected-accounts/callback', [ConnectedAccountController::class, 'callback'])->middleware('throttle:30,1');
 
     // Hosted web-to-lead forms (public, by slug)
     Route::get('forms/{slug}', [PublicFormController::class, 'show']);
@@ -196,6 +198,11 @@ Route::prefix('v1')->group(function () {
                 Route::get('broadcasts/{id}/recipients', [BroadcastController::class, 'recipients']);
             });
         });
+        Route::get('connected-accounts', [ConnectedAccountController::class, 'index']);
+        Route::post('connected-accounts/{provider}/connect', [ConnectedAccountController::class, 'connect'])->whereIn('provider', ['google', 'microsoft']);
+        Route::patch('connected-accounts/{id}', [ConnectedAccountController::class, 'update'])->whereNumber('id');
+        Route::post('connected-accounts/{id}/sync', [ConnectedAccountController::class, 'sync'])->whereNumber('id')->middleware('throttle:10,1');
+        Route::delete('connected-accounts/{id}', [ConnectedAccountController::class, 'destroy'])->whereNumber('id');
         Route::get('inbox', [InboxController::class, 'index']);
         Route::get('inbox/summary', [InboxController::class, 'summary']);
         Route::get('inbox/{leadId}', [InboxController::class, 'show'])->whereNumber('leadId');

@@ -964,3 +964,13 @@ export interface AttributionResult {
   rows: { key: string; label: string; touches: number; leads: ByModel; conversions: ByModel; revenue: ByModel | null }[]
   totals: { leads: number; converted: number; revenue: number | null; touches: number }
 }
+
+export interface ConnectedAccount {
+  id: number
+  provider: 'google' | 'microsoft'
+  email: string
+  sync_mail: boolean
+  sync_calendar: boolean
+  last_synced_at: string | null
+  last_error: string | null
+}

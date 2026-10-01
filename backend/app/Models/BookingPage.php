@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
+use App\Services\Mailbox;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,12 @@ class BookingPage extends Model
             ->whereBetween('due_at', [$now->copy()->subDay(), $now->copy()->addDays($this->days_ahead + 1)])
             ->get(['due_at', 'description'])
             ->map(fn (Task $t) => [$t->due_at->copy()->subMinutes($buffer), $t->due_at->copy()->addMinutes(($this->durationOf($t) ?? $length) + $buffer)]);
+        // Busy times from the host's connected Google / Outlook calendar.
+        if ($account = ConnectedAccount::calendarFor($this->user_id)) {
+            $mailbox = app(Mailbox::class);
+            $external = $mailbox->safely($account, fn () => $mailbox->busy($account, $now->copy()->startOfDay(), $now->copy()->addDays($this->days_ahead + 1))) ?? [];
+            $busy = $busy->concat(array_map(fn ($b) => [$b[0]->copy()->subMinutes($buffer), $b[1]->copy()->addMinutes($buffer)], $external));
+        }
 
         $slots = [];
         $day = $now->copy()->setTimezone($tz)->startOfDay();
