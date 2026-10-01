@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { GitBranch, Mail, Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
+import { FileText, GitBranch, Link2, Mail, Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
 import { resources, useDeleteSettingMutation, useMetaQuery, useSaveSettingMutation, useSettings } from '@/services/api'
 import { Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Select, Tabs, Textarea } from '@/components/ui'
@@ -8,6 +8,8 @@ import { date, money, percent } from '@/lib/format'
 import type { Campaign } from '@/types'
 import { EmailCampaigns } from '@/pages/marketing/EmailCampaigns'
 import { Attribution } from '@/pages/marketing/Attribution'
+import { LandingPages } from '@/pages/marketing/LandingPages'
+import { LinkBuilder } from '@/pages/marketing/LinkBuilder'
 
 const statusColor: Record<string, string> = { planned: '#64748b', active: '#10b981', paused: '#f59e0b', completed: '#8b5cf6' }
 
@@ -93,7 +95,7 @@ function CampaignCards() {
   )
 }
 
-type Tab = 'campaigns' | 'email' | 'attribution'
+type Tab = 'campaigns' | 'email' | 'pages' | 'links' | 'attribution'
 
 /** Marketing hub: campaigns, email sends with A/B tests, and multi-touch attribution. */
 export function CampaignsPage() {
@@ -101,7 +103,11 @@ export function CampaignsPage() {
   const [params, setParams] = useSearchParams()
   const tabs: { value: Tab; label: string; icon: React.ReactNode }[] = [
     { value: 'campaigns', label: 'Campaigns', icon: <Megaphone /> },
-    ...(manager ? [{ value: 'email' as const, label: 'Email campaigns', icon: <Mail /> }] : []),
+    ...(manager ? [
+      { value: 'email' as const, label: 'Email campaigns', icon: <Mail /> },
+      { value: 'pages' as const, label: 'Landing pages', icon: <FileText /> },
+      { value: 'links' as const, label: 'Links', icon: <Link2 /> },
+    ] : []),
     { value: 'attribution', label: 'Attribution', icon: <GitBranch /> },
   ]
   const tab = (tabs.some((t) => t.value === params.get('tab')) ? params.get('tab') : 'campaigns') as Tab
@@ -109,7 +115,7 @@ export function CampaignsPage() {
     <div>
       <PageHeader icon={<Megaphone />} title="Campaigns" description="Where leads come from, what each campaign costs, and what actually drives revenue." />
       <Tabs className="mb-6" tabs={tabs} value={tab} onChange={(t) => setParams(t === 'campaigns' ? {} : { tab: t })} />
-      {tab === 'email' ? <EmailCampaigns /> : tab === 'attribution' ? <Attribution /> : <CampaignCards />}
+      {tab === 'email' ? <EmailCampaigns /> : tab === 'pages' ? <LandingPages /> : tab === 'links' ? <LinkBuilder /> : tab === 'attribution' ? <Attribution /> : <CampaignCards />}
     </div>
   )
 }

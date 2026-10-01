@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\EmailTrackingController;
 use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\InboundWebhookController;
 use App\Http\Controllers\Api\InboxController;
+use App\Http\Controllers\Api\LandingPageController;
 use App\Http\Controllers\Api\LeadCaptureController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\LeadImportController;
@@ -40,6 +41,7 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\Settings;
 use App\Http\Controllers\Api\SsoController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TrackedLinkController;
 use App\Http\Controllers\Api\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +71,8 @@ Route::prefix('v1')->group(function () {
         Route::get('public/quotes/{token}', [PublicQuoteController::class, 'show'])->where('token', '[A-Za-z0-9]{40}');
         Route::post('public/unsubscribe/{lead}/{signature}', [PrivacyController::class, 'unsubscribe'])->whereNumber('lead')->where('signature', '[a-f0-9]{32}');
         Route::get('public/book/{slug}', [BookingController::class, 'publicShow'])->where('slug', '[a-z0-9-]+');
+        Route::get('public/pages/{slug}', [LandingPageController::class, 'publicShow'])->where('slug', '[a-z0-9-]+');
+        Route::post('public/pages/{slug}/submit', [LandingPageController::class, 'submit'])->where('slug', '[a-z0-9-]+')->middleware('throttle:capture');
         Route::post('public/book/{slug}', [BookingController::class, 'book'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1');
         Route::get('public/calendar/{token}.ics', [CalendarFeedController::class, 'feed'])->where('token', '[A-Za-z0-9]{40}');
         Route::post('public/quotes/{token}/respond', [PublicQuoteController::class, 'respond'])->where('token', '[A-Za-z0-9]{40}');
@@ -192,6 +196,15 @@ Route::prefix('v1')->group(function () {
         Route::get('deals/board', [DealController::class, 'board']);
         Route::get('deals/forecast', [DealController::class, 'forecast']);
         Route::middleware('role:admin,manager')->group(function () {
+            Route::get('landing-pages', [LandingPageController::class, 'index']);
+            Route::post('landing-pages', [LandingPageController::class, 'store']);
+            Route::get('landing-pages/suggest-slug', [LandingPageController::class, 'suggestSlug']);
+            Route::get('landing-pages/{id}', [LandingPageController::class, 'show'])->whereNumber('id');
+            Route::put('landing-pages/{id}', [LandingPageController::class, 'update'])->whereNumber('id');
+            Route::delete('landing-pages/{id}', [LandingPageController::class, 'destroy'])->whereNumber('id');
+            Route::get('tracked-links', [TrackedLinkController::class, 'index']);
+            Route::post('tracked-links', [TrackedLinkController::class, 'store']);
+            Route::delete('tracked-links/{id}', [TrackedLinkController::class, 'destroy'])->whereNumber('id');
             Route::get('broadcasts', [BroadcastController::class, 'index']);
             Route::post('broadcasts', [BroadcastController::class, 'store']);
             Route::post('broadcasts/audience', [BroadcastController::class, 'audience']);

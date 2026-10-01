@@ -12,6 +12,7 @@ use App\Models\Campaign;
 use App\Models\Dashboard;
 use App\Models\Deal;
 use App\Models\Goal;
+use App\Models\LandingPage;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
@@ -22,7 +23,9 @@ use App\Models\SavedReport;
 use App\Models\Tag;
 use App\Models\Task;
 use App\Models\Team;
+use App\Models\TrackedLink;
 use App\Models\User;
+use App\Models\WebForm;
 use App\Reports\ReportEngine;
 use App\Services\BroadcastService;
 use App\Services\CallService;
@@ -218,6 +221,30 @@ class DemoSeeder extends Seeder
             $broadcasts->pickWinner($broadcast->refresh());
             $broadcasts->sendQueued($broadcast->refresh());
             $engage(false);
+
+            // A live landing page for the first campaign, and a few tagged links pointing at it.
+            $page = LandingPage::create([
+                'name' => 'Spring demo week', 'slug' => 'spring-demo-week', 'is_published' => true, 'created_by' => $admin->id,
+                'campaign_id' => Campaign::value('id'), 'web_form_id' => WebForm::value('id'), 'accent_color' => '#7c3aed',
+                'seo_description' => 'See LeadFlow capture, qualify and convert leads in a 20-minute live demo.',
+                'blocks' => [
+                    ['type' => 'hero', 'heading' => 'Never lose a lead again', 'subheading' => 'Capture every enquiry, follow up automatically and see what actually drives revenue.', 'button_label' => 'Book my demo'],
+                    ['type' => 'features', 'heading' => 'What you get', 'items' => [
+                        ['title' => 'Instant routing', 'body' => 'New leads reach the right rep in seconds.'],
+                        ['title' => 'AI calling', 'body' => 'Voice agents qualify leads and book meetings.'],
+                        ['title' => 'Revenue insight', 'body' => 'Attribution shows which campaigns pay off.'],
+                    ]],
+                    ['type' => 'testimonial', 'quote' => 'Our response time went from a day to under ten minutes.', 'author' => 'Jordan Lee', 'role' => 'Head of Sales, Northwind'],
+                    ['type' => 'form', 'heading' => 'Book a 20-minute demo', 'body' => 'We’ll reply within one business day.'],
+                ],
+            ]);
+            $page->forceFill(['views' => 184, 'submissions' => 9])->save();
+            foreach ([['linkedin', 'social', 132], ['newsletter', 'email', 87], ['google', 'cpc', 241]] as [$source, $medium, $clicks]) {
+                TrackedLink::create([
+                    'code' => Str::random(7), 'created_by' => $admin->id, 'campaign_id' => $page->campaign_id, 'destination' => $page->url(),
+                    'utm_source' => $source, 'utm_medium' => $medium, 'utm_campaign' => 'spring-demo-week',
+                ])->forceFill(['clicks' => $clicks, 'last_clicked_at' => now()->subHours(random_int(1, 48))])->save();
+            }
 
             Deal::whereNotNull('pipeline_stage_id')->get()->each(function (Deal $deal) use ($stages) {
                 $stage = $stages->firstWhere('id', $deal->pipeline_stage_id);

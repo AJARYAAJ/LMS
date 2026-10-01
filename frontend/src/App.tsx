@@ -36,7 +36,8 @@ const UnsubscribePage = lazyPage(() => import('@/pages/UnsubscribePage'), 'Unsub
 const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage')
 
 const OAuthConsentPage = lazyPage(() => import('@/pages/OAuthConsentPage'), 'OAuthConsentPage')
-const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, InboxPage, PublicBookingPage, UnsubscribePage, OAuthConsentPage, NotFoundPage]
+const PublicLandingPage = lazyPage(() => import('@/pages/PublicLandingPage'), 'PublicLandingPage')
+const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, InboxPage, PublicBookingPage, UnsubscribePage, OAuthConsentPage, PublicLandingPage, NotFoundPage]
 
 /** Load every page chunk once the browser is idle so navigation never waits. */
 function usePrefetchPages() {
@@ -61,6 +62,7 @@ export default function App() {
         <Route path="/book/:slug" element={<PublicBookingPage />} />
         <Route path="/unsubscribe/:lead/:signature" element={<UnsubscribePage />} />
         <Route path="/oauth/authorize" element={<OAuthConsentPage />} />
+        <Route path="/p/:slug" element={<PublicLandingPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="leads" element={<LeadsPage />} />

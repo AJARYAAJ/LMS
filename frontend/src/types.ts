@@ -984,3 +984,51 @@ export interface OAuthAppRow {
   active_users: number
   created_at: string
 }
+
+export interface LandingBlock {
+  type: 'hero' | 'text' | 'features' | 'testimonial' | 'form' | 'cta'
+  heading?: string
+  subheading?: string
+  body?: string
+  button_label?: string
+  image_url?: string
+  quote?: string
+  author?: string
+  role?: string
+  items?: { title: string; body?: string }[]
+}
+
+export interface LandingPageRow {
+  id: number
+  name: string
+  slug: string
+  campaign_id: number | null
+  web_form_id: number | null
+  is_published: boolean
+  blocks: LandingBlock[]
+  accent_color: string
+  seo_title: string | null
+  seo_description: string | null
+  views: number
+  submissions: number
+  url: string
+  campaign?: { id: number; name: string } | null
+  form?: { id: number; name: string } | null
+}
+
+export interface TrackedLinkRow {
+  id: number
+  code: string
+  label: string | null
+  destination: string
+  campaign_id: number | null
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  clicks: number
+  last_clicked_at: string | null
+  short_url: string
+  tagged_url: string
+}

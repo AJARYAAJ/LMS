@@ -2,8 +2,9 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, Broadcast, BroadcastDetail, BroadcastInput, BroadcastRecipientRow, AttributionResult, ConnectedAccount, OAuthAppRow, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, Broadcast, BroadcastDetail, BroadcastInput, BroadcastRecipientRow, AttributionResult, ConnectedAccount, OAuthAppRow, LandingPageRow, TrackedLinkRow, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
+import type { LandingContent } from '@/components/marketing/LandingBlocks'
 import { loggedOut } from '@/features/auth/authSlice'
 
 export const API_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
@@ -95,7 +96,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution', 'ConnectedAccount', 'Push', 'OAuthApp',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution', 'ConnectedAccount', 'Push', 'OAuthApp', 'LandingPage', 'TrackedLink',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -546,6 +547,45 @@ export const api = createApi({
       query: (id) => ({ url: `settings/oauth-apps/${id}`, method: 'DELETE' }),
       invalidatesTags: ['OAuthApp'],
     }),
+    landingPages: b.query<LandingPageRow[], void>({
+      query: () => 'landing-pages',
+      transformResponse: (r: { data: LandingPageRow[] }) => r.data,
+      providesTags: ['LandingPage'],
+    }),
+    saveLandingPage: b.mutation<LandingPageRow, Partial<LandingPageRow> & { id?: number }>({
+      query: ({ id, ...body }) => ({ url: id ? `landing-pages/${id}` : 'landing-pages', method: id ? 'PUT' : 'POST', body }),
+      transformResponse: (r: { data: LandingPageRow }) => r.data,
+      invalidatesTags: ['LandingPage'],
+    }),
+    deleteLandingPage: b.mutation<void, number>({
+      query: (id) => ({ url: `landing-pages/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['LandingPage'],
+    }),
+    suggestLandingSlug: b.query<{ slug: string }, string>({
+      query: (name) => ({ url: 'landing-pages/suggest-slug', params: { name } }),
+      transformResponse: (r: { data: { slug: string } }) => r.data,
+    }),
+    publicLandingPage: b.query<LandingContent & { seo_title: string; seo_description: string | null }, string>({
+      query: (slug) => `public/pages/${slug}`,
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    submitLandingPage: b.mutation<{ message: string; redirect_url: string | null }, { slug: string; body: Record<string, string> }>({
+      query: ({ slug, body }) => ({ url: `public/pages/${slug}/submit`, method: 'POST', body }),
+    }),
+    trackedLinks: b.query<TrackedLinkRow[], void>({
+      query: () => 'tracked-links',
+      transformResponse: (r: { data: TrackedLinkRow[] }) => r.data,
+      providesTags: ['TrackedLink'],
+    }),
+    createTrackedLink: b.mutation<TrackedLinkRow, Record<string, string | number | null>>({
+      query: (body) => ({ url: 'tracked-links', method: 'POST', body }),
+      transformResponse: (r: { data: TrackedLinkRow }) => r.data,
+      invalidatesTags: ['TrackedLink'],
+    }),
+    deleteTrackedLink: b.mutation<void, number>({
+      query: (id) => ({ url: `tracked-links/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['TrackedLink'],
+    }),
     pushConfig: b.query<{ vapid_public_key: string; fcm: boolean; devices: { id: number; kind: 'webpush' | 'fcm'; device: string | null; last_used_at: string | null; created_at: string }[] }, void>({
       query: () => 'push',
       transformResponse: (r: { data: never }) => r.data,
@@ -892,6 +932,8 @@ export const {
   useBroadcastsQuery, useBroadcastQuery, useBroadcastRecipientsQuery, useBroadcastAudienceMutation, useSaveBroadcastMutation,
   useDeleteBroadcastMutation, useLaunchBroadcastMutation, useBroadcastActionMutation, useAttributionQuery,
   useDescribeOAuthQuery, useApproveOAuthMutation, useOauthAppsQuery, useCreateOAuthAppMutation, useRotateOAuthSecretMutation, useDeleteOAuthAppMutation,
+  useLandingPagesQuery, useSaveLandingPageMutation, useDeleteLandingPageMutation, useLazySuggestLandingSlugQuery, usePublicLandingPageQuery, useSubmitLandingPageMutation,
+  useTrackedLinksQuery, useCreateTrackedLinkMutation, useDeleteTrackedLinkMutation,
   usePushConfigQuery, useSubscribePushMutation, useUnsubscribePushMutation, useConnectedAccountsQuery, useConnectAccountMutation, useUpdateConnectedAccountMutation, useSyncAccountMutation, useDisconnectAccountMutation,
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,

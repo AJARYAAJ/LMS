@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\WebForm;
-use App\Services\LeadService;
-use App\Support\Tenant;
+use App\Services\WebFormSubmitter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -23,47 +22,14 @@ class PublicFormController extends Controller
         ]) + ['organization' => $form->organization->name]]);
     }
 
-    public function submit(Request $request, string $slug, LeadService $leads): JsonResponse
+    public function submit(Request $request, string $slug, WebFormSubmitter $submitter): JsonResponse
     {
         $form = $this->find($slug);
 
         if ($request->filled('_hp')) {
             return response()->json(['message' => $form->success_message], 202);
         }
-
-        $rules = [];
-        foreach ($form->fields as $field) {
-            $rules[$field['key']] = array_filter([
-                ! empty($field['required']) ? 'required' : 'nullable',
-                match ($field['type'] ?? 'text') {
-                    'email' => 'email',
-                    'number' => 'numeric',
-                    default => 'string',
-                },
-                ($field['type'] ?? 'text') === 'textarea' ? 'max:5000' : 'max:190',
-            ]);
-        }
-        $data = $request->validate($rules);
-
-        if (empty($data['first_name']) && ! empty($data['name'])) {
-            [$data['first_name'], $data['last_name']] = array_pad(preg_split('/\s+/', trim($data['name']), 2), 2, null);
-        }
-        unset($data['name']);
-        $data['first_name'] ??= $data['email'] ?? 'Web visitor';
-
-        $lead = Tenant::run($form->organization_id, function () use ($form, $data, $leads) {
-            $lead = $leads->create(array_filter([
-                ...array_intersect_key($data, array_flip(WebForm::FIELD_KEYS)),
-                'lead_source_id' => $form->lead_source_id,
-                'campaign_id' => $form->campaign_id,
-                'tag_ids' => $form->tag_ids ?: null,
-                'custom_fields' => ['web_form' => $form->name],
-            ], fn ($v) => $v !== null && $v !== ''), null, 'web_form');
-
-            $form->increment('submissions_count');
-
-            return $lead;
-        });
+        $lead = $submitter->submit($form, $request);
 
         return response()->json(['message' => $form->success_message, 'redirect_url' => $form->redirect_url, 'id' => $lead->id], 201);
     }

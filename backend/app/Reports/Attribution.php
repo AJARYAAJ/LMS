@@ -22,7 +22,7 @@ class Attribution
     public const BY = ['campaign', 'source', 'channel'];
 
     public const CHANNELS = [
-        'capture' => 'Added manually', 'manual' => 'Added manually', 'web_form' => 'Web form', 'booking_page' => 'Booking page',
+        'capture' => 'Added manually', 'manual' => 'Added manually', 'web_form' => 'Web form', 'landing_page' => 'Landing page', 'booking_page' => 'Booking page',
         'email_click' => 'Email click', 'phone' => 'Phone call', 'api' => 'API', 'import' => 'Import', 'webhook' => 'Integration',
     ];
 
