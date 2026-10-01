@@ -29,7 +29,8 @@ class PrivacyController extends Controller
             'source' => ['nullable', 'string', 'max:60'],
         ]);
         $lead->setConsent($data['channel'], $data['status'], $data['source'] ?? 'manual:'.$request->user()->name);
-        $this->activities->record($lead, 'system', 'Consent: '.ucfirst($data['channel'])." {$data['status']}", ['user_id' => $request->user()->id]);
+        $label = ['email' => 'Email', 'sms' => 'SMS', 'whatsapp' => 'WhatsApp', 'calls' => 'Calls'][$data['channel']];
+        $this->activities->record($lead, 'system', "{$label} consent: ".['granted' => 'opted in', 'denied' => 'opted out', 'unknown' => 'reset'][$data['status']], ['user_id' => $request->user()->id]);
 
         return response()->json(['data' => ['consent' => $lead->consent]]);
     }
