@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Bot, CalendarCheck, Clock, Headphones, Pencil, PhoneCall, PhoneForwarded, Plus, Rocket, Trash2, X } from 'lucide-react'
+import { Bot, CalendarCheck, Clock, Headphones, Pencil, PhoneCall, PhoneForwarded, PhoneIncoming, Plus, Rocket, Trash2, X } from 'lucide-react'
 import { useAction, usePermissions, useToast } from '@/app/hooks'
 import {
-  resources, useCallStatsQuery, useCallsQuery, useDeleteSettingMutation, useLaunchCampaignMutation, useMetaQuery, useSaveSettingMutation, useSettings,
+  resources, useCallStatsQuery, useCallsQuery, useDeleteSettingMutation, useLaunchCampaignMutation, useMetaQuery, useSaveSettingMutation, useSettings, useSimulateInboundCallMutation,
 } from '@/services/api'
 import {
   Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Pagination, Segmented, Select, StatCard, Tabs, Textarea, Toggle,
@@ -26,10 +26,10 @@ export function CallsPage() {
 
   return (
     <div>
-      <PageHeader icon={<PhoneCall />} title="AI calls" description="Voice agents that call leads, qualify them and book the next step — every call lands on the lead's timeline."
+      <PageHeader icon={<PhoneCall />} title="AI calls" description="Voice agents that call leads or answer your phone, qualify people and book the next step — every call lands on the lead's timeline."
         actions={manager && <>
           <Button size="sm" variant="secondary" icon={<Plus className="size-4" />} onClick={() => setEditing({})}>New agent</Button>
-          <Button size="sm" icon={<Rocket className="size-4" />} onClick={() => setCampaignFor('pick')} disabled={!agents?.some((a) => a.is_active)}>Launch campaign</Button>
+          <Button size="sm" icon={<Rocket className="size-4" />} onClick={() => setCampaignFor('pick')} disabled={!agents?.some((a) => a.is_active && a.mode !== 'inbound')}>Launch campaign</Button>
         </>} />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -73,11 +73,11 @@ function OutcomeBar({ outcomes }: { outcomes: Record<string, number> }) {
 }
 
 function CallLog() {
-  const [filter, setFilter] = useState<'all' | 'live' | 'positive' | 'missed'>('all')
+  const [filter, setFilter] = useState<'all' | 'live' | 'positive' | 'missed' | 'inbound'>('all')
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState<number | null>(null)
   const query = {
-    all: {}, live: { status: 'queued,ringing,in_progress' }, positive: { outcome: 'meeting_booked,interested,callback' }, missed: { status: 'no_answer,voicemail,failed' },
+    all: {}, live: { status: 'queued,ringing,in_progress' }, positive: { outcome: 'meeting_booked,interested,callback' }, missed: { status: 'no_answer,voicemail,failed' }, inbound: { direction: 'inbound' },
   }[filter]
   const { data, isLoading } = useCallsQuery({ ...query, page }, { pollingInterval: 5000, skipPollingIfUnfocused: true })
 
@@ -85,7 +85,7 @@ function CallLog() {
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/60 p-4 dark:border-white/[0.06]">
         <Segmented value={filter} onChange={(v) => { setFilter(v); setPage(1) }}
-          options={[{ value: 'all', label: 'All' }, { value: 'live', label: 'Live' }, { value: 'positive', label: 'Positive' }, { value: 'missed', label: 'Missed' }]} />
+          options={[{ value: 'all', label: 'All' }, { value: 'live', label: 'Live' }, { value: 'positive', label: 'Positive' }, { value: 'missed', label: 'Missed' }, { value: 'inbound', label: 'Incoming' }]} />
         <p className="text-xs text-slate-500">Refreshes automatically</p>
       </div>
       {isLoading ? <PageLoader /> : !data?.data.length ? <EmptyState icon={<Headphones />} title="No calls here yet" description="Start one from a lead with the AI call button, or launch a campaign." /> : (
@@ -102,7 +102,7 @@ function CallLog() {
                       {c.lead ? <Link to={`/leads/${c.lead.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-slate-900 hover:text-brand-600 dark:text-white">{[c.lead.first_name, c.lead.last_name].filter(Boolean).join(' ')}</Link> : '—'}
                       <p className="text-xs text-slate-500">{c.lead?.company ?? c.to_number}</p>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">{c.agent?.name ?? '—'}{c.campaign_key && <Badge className="ml-1.5" color="#8b5cf6">campaign</Badge>}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{c.direction === 'inbound' && <PhoneIncoming className="mr-1.5 inline size-3.5 text-emerald-600" aria-label="Incoming call" />}{c.agent?.name ?? '—'}{c.campaign_key && <Badge className="ml-1.5" color="#8b5cf6">campaign</Badge>}</td>
                     <td className="px-4 py-3"><CallStatusBadge status={c.status} /></td>
                     <td className="px-4 py-3"><OutcomeBadge outcome={c.outcome} /></td>
                     <td className="px-4 py-3 tabular-nums">{duration(c.duration_seconds)}</td>
@@ -126,6 +126,12 @@ function Agents({ agents, onEdit, onCampaign }: { agents?: AiAgent[]; onEdit: (a
   const { manager } = usePermissions()
   const [remove] = useDeleteSettingMutation()
   const [deleting, setDeleting] = useState<AiAgent | null>(null)
+  const [simulate, simState] = useSimulateInboundCallMutation()
+  const [watching, setWatching] = useState<number | null>(null)
+  const testCall = async (a: AiAgent) => {
+    const c = await run(simulate({ agentId: a.id }), 'A test caller is ringing the receptionist')
+    if (c) setWatching(c.id)
+  }
   if (!agents) return <PageLoader />
   if (!agents.length) return <div className="card"><EmptyState icon={<Bot />} title="No agents yet" description="Create a voice agent with a goal and the questions it should ask." /></div>
 
@@ -138,6 +144,7 @@ function Agents({ agents, onEdit, onCampaign }: { agents?: AiAgent[]; onEdit: (a
             <div className="flex items-start justify-between">
               <span className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-fuchsia-500 text-white shadow-lg shadow-brand-500/30"><Bot className="size-5" /></span>
               <div className="flex items-center gap-1">
+                {a.mode === 'inbound' && <Badge color="#0d9488">receptionist</Badge>}
                 <Badge color={a.is_active ? '#10b981' : '#94a3b8'} dot>{a.is_active ? 'active' : 'paused'}</Badge>
                 {manager && <div className="flex opacity-0 transition group-hover:opacity-100">
                   <button onClick={() => onEdit(a)} className="rounded-lg p-1.5 text-slate-400 hover:text-brand-600" aria-label="Edit agent"><Pencil className="size-4" /></button>
@@ -155,13 +162,16 @@ function Agents({ agents, onEdit, onCampaign }: { agents?: AiAgent[]; onEdit: (a
             </div>
             <div className="mt-4 flex items-center justify-between">
               <span className="text-xs text-slate-500">{a.questions?.length ?? 0} questions · {percent(rate, 0)} booked</span>
-              {manager && a.is_active && <Button size="xs" variant="subtle" icon={<Rocket className="size-3.5" />} onClick={() => onCampaign(a)}>Campaign</Button>}
+              {manager && a.is_active && (a.mode === 'inbound'
+                ? <Button size="xs" variant="subtle" icon={<PhoneIncoming className="size-3.5" />} loading={simState.isLoading && simState.originalArgs?.agentId === a.id} onClick={() => testCall(a)}>Test call</Button>
+                : <Button size="xs" variant="subtle" icon={<Rocket className="size-3.5" />} onClick={() => onCampaign(a)}>Campaign</Button>)}
             </div>
           </div>
         )
       })}
       <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)} title={`Delete ${deleting?.name}?`} message="Past calls stay in the log."
         onConfirm={async () => { if (deleting) await run(remove({ ...resources.aiAgents, id: deleting.id }), 'Agent deleted'); setDeleting(null) }} />
+      <CallDrawer callId={watching} onClose={() => setWatching(null)} />
     </div>
   )
 }
@@ -178,7 +188,7 @@ function AgentModal({ agent, onClose }: { agent: Partial<AiAgent> | null; onClos
 
   useEffect(() => {
     if (agent) setForm({
-      voice: 'alloy', language: 'en-US', max_duration_seconds: 300, is_active: true, questions: [{ key: '', question: '' }], ...agent,
+      mode: 'outbound', voice: 'alloy', language: 'en-US', max_duration_seconds: 300, is_active: true, questions: [{ key: '', question: '' }], ...agent,
       integration_id: agent.integration_id ?? null,
     })
   }, [agent])
@@ -195,7 +205,11 @@ function AgentModal({ agent, onClose }: { agent: Partial<AiAgent> | null; onClos
     <Modal open={!!agent} onClose={onClose} size="lg" title={agent?.id ? 'Edit AI agent' : 'New AI agent'} description="Describe the goal in plain words — the agent follows it on every call."
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={submit} disabled={!form.name || !form.goal || !form.first_message} loading={state.isLoading}>Save agent</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" required><Input value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} placeholder="Ava — inbound qualifier" /></Field>
+        <div className="sm:col-span-2">
+          <Segmented value={form.mode ?? 'outbound'} onChange={(v) => set('mode', v)} options={[{ value: 'outbound', label: 'Calls leads', icon: <PhoneCall /> }, { value: 'inbound', label: 'Answers calls (receptionist)', icon: <PhoneIncoming /> }]} />
+          {form.mode === 'inbound' && <p className="mt-2 text-xs text-slate-500">Callers are matched to leads by phone number; unknown callers become new leads. Connect a Vapi or Retell phone number and point its server URL at the webhook shown under Settings → Integrations.</p>}
+        </div>
+        <Field label="Name" required><Input value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} placeholder={form.mode === 'inbound' ? 'Max — AI receptionist' : 'Ava — inbound qualifier'} /></Field>
         <Field label="Voice provider" hint="Connect vendors under Settings → Integrations">
           <Select value={form.integration_id ?? ''} onChange={(e) => set('integration_id', e.target.value ? Number(e.target.value) : null)} placeholder="Best available">
             {voiceProviders.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -231,7 +245,7 @@ function CampaignModal({ target, agents, onClose }: { target: AiAgent | 'pick' |
   const [agentId, setAgentId] = useState('')
   const [conditions, setConditions] = useState<Condition[]>([])
   const [limit, setLimit] = useState(25)
-  const active = agents.filter((a) => a.is_active)
+  const active = agents.filter((a) => a.is_active && a.mode !== 'inbound')
 
   useEffect(() => {
     if (target) {

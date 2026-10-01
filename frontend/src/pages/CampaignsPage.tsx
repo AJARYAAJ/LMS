@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { GitBranch, Mail, Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAction, useAppSelector, usePermissions } from '@/app/hooks'
 import { resources, useDeleteSettingMutation, useMetaQuery, useSaveSettingMutation, useSettings } from '@/services/api'
-import { Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Select, Textarea } from '@/components/ui'
+import { Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageHeader, PageLoader, Select, Tabs, Textarea } from '@/components/ui'
 import { date, money, percent } from '@/lib/format'
 import type { Campaign } from '@/types'
+import { EmailCampaigns } from '@/pages/marketing/EmailCampaigns'
+import { Attribution } from '@/pages/marketing/Attribution'
 
 const statusColor: Record<string, string> = { planned: '#64748b', active: '#10b981', paused: '#f59e0b', completed: '#8b5cf6' }
 
-export function CampaignsPage() {
+function CampaignCards() {
   const run = useAction()
   const { manager } = usePermissions()
   const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
@@ -34,8 +36,7 @@ export function CampaignsPage() {
 
   return (
     <div>
-      <PageHeader icon={<Megaphone />} title="Campaigns" description="Track where leads come from and what each one costs."
-        actions={manager && <Button size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing({})}>New campaign</Button>} />
+      {manager && <div className="mb-4 flex justify-end"><Button size="sm" icon={<Plus className="size-4" />} onClick={() => setEditing({})}>New campaign</Button></div>}
       {isLoading ? <PageLoader /> : !data?.length ? <div className="card"><EmptyState icon={<Megaphone />} title="No campaigns yet" /></div> : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {data.map((c) => {
@@ -88,6 +89,27 @@ export function CampaignsPage() {
       </Modal>
       <ConfirmDialog open={!!deleting} onClose={() => setDeleting(null)} title={`Delete ${deleting?.name}?`} message="Leads keep their data but lose the campaign link."
         onConfirm={async () => { if (deleting) await run(remove({ ...resources.campaigns, id: deleting.id }), 'Campaign deleted'); setDeleting(null) }} />
+    </div>
+  )
+}
+
+type Tab = 'campaigns' | 'email' | 'attribution'
+
+/** Marketing hub: campaigns, email sends with A/B tests, and multi-touch attribution. */
+export function CampaignsPage() {
+  const { manager } = usePermissions()
+  const [params, setParams] = useSearchParams()
+  const tabs: { value: Tab; label: string; icon: React.ReactNode }[] = [
+    { value: 'campaigns', label: 'Campaigns', icon: <Megaphone /> },
+    ...(manager ? [{ value: 'email' as const, label: 'Email campaigns', icon: <Mail /> }] : []),
+    { value: 'attribution', label: 'Attribution', icon: <GitBranch /> },
+  ]
+  const tab = (tabs.some((t) => t.value === params.get('tab')) ? params.get('tab') : 'campaigns') as Tab
+  return (
+    <div>
+      <PageHeader icon={<Megaphone />} title="Campaigns" description="Where leads come from, what each campaign costs, and what actually drives revenue." />
+      <Tabs className="mb-6" tabs={tabs} value={tab} onChange={(t) => setParams(t === 'campaigns' ? {} : { tab: t })} />
+      {tab === 'email' ? <EmailCampaigns /> : tab === 'attribution' ? <Attribution /> : <CampaignCards />}
     </div>
   )
 }

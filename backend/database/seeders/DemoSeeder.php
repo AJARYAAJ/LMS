@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\AiAgent;
 use App\Models\AssignmentRule;
 use App\Models\BookingPage;
+use App\Models\Broadcast;
 use App\Models\Campaign;
 use App\Models\Dashboard;
 use App\Models\Deal;
@@ -23,6 +24,7 @@ use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
 use App\Reports\ReportEngine;
+use App\Services\BroadcastService;
 use App\Services\CallService;
 use App\Services\ConversionPredictor;
 use App\Services\LeadService;
@@ -179,6 +181,43 @@ class DemoSeeder extends Seeder
                     $call = app(CallService::class)->start($lead, $agent, $admin);
                     SimulateCallResult::dispatchSync($call->id);
                 });
+
+            // The AI receptionist answered a few calls: one from a known lead, two new callers.
+            $receptionist = AiAgent::where('mode', 'inbound')->first();
+            collect([Lead::whereNotNull('phone')->whereNull('converted_at')->inRandomOrder()->value('phone'), '+15550104477', '+15550109321'])->filter()->values()
+                ->each(fn ($from, $i) => SimulateCallResult::dispatchSync(
+                    app(CallService::class)->receiveInbound($receptionist->integration, $from, "sim_in_demo_{$i}", $receptionist)->id,
+                ));
+
+            // An email campaign that A/B tested two subject lines, with opens and clicks.
+            $broadcasts = app(BroadcastService::class);
+            $broadcast = Broadcast::create([
+                'name' => 'Q3 product update', 'created_by' => $admin->id, 'campaign_id' => Campaign::value('id'),
+                'conditions' => [['field' => 'industry', 'operator' => 'in', 'value' => 'Software,Retail']],
+                'variants' => [
+                    ['key' => 'A', 'subject' => 'What’s new in Q3', 'body' => "Hi {first_name},\n\nHere is what we shipped this quarter: https://example.com/q3-update\n\nBest,\n{sender.name}"],
+                    ['key' => 'B', 'subject' => '{first_name}, 3 things your team asked for', 'body' => "Hi {first_name},\n\nYou asked, we built it: https://example.com/q3-update\n\nBest,\n{sender.name}"],
+                ],
+                'test_percent' => 30, 'winner_metric' => 'click', 'winner_after_hours' => 4,
+            ]);
+            // During the test the personal subject line (B) clearly does better; afterwards it's a normal mix.
+            $engage = function (bool $test) use ($broadcast, $broadcasts, $faker) {
+                $broadcast->recipients()->where('status', 'sent')->whereNull('opened_at')->get()->each(function ($r, $i) use ($broadcasts, $faker, $test) {
+                    if ($test ? $r->variant === 'B' || $i % 2 === 0 : $faker->boolean(55)) {
+                        $broadcasts->trackOpen($r->token);
+                        if ($test ? $r->variant === 'B' : $faker->boolean(30)) {
+                            $url = 'https://example.com/q3-update';
+                            $broadcasts->trackClick($r->token, BroadcastService::linkSignature($r->token, $url), $url);
+                        }
+                    }
+                });
+            };
+            $broadcasts->launch($broadcast);
+            $broadcasts->sendQueued($broadcast->refresh());
+            $engage(true);
+            $broadcasts->pickWinner($broadcast->refresh());
+            $broadcasts->sendQueued($broadcast->refresh());
+            $engage(false);
 
             Deal::whereNotNull('pipeline_stage_id')->get()->each(function (Deal $deal) use ($stages) {
                 $stage = $stages->firstWhere('id', $deal->pipeline_stage_id);

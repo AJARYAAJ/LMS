@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, Broadcast, BroadcastDetail, BroadcastInput, BroadcastRecipientRow, AttributionResult, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -718,6 +718,55 @@ export const api = createApi({
       transformResponse: (r: { data: never }) => r.data,
       invalidatesTags: ['Call'],
     }),
+    simulateInboundCall: b.mutation<Call, { agentId: number; phone?: string }>({
+      query: ({ agentId, ...body }) => ({ url: `ai-agents/${agentId}/simulate-inbound`, method: 'POST', body }),
+      transformResponse: (r: { data: Call }) => r.data,
+      invalidatesTags: ['Call', 'Lead', 'Attribution'],
+    }),
+
+    // ------------------------------------------------- email campaigns
+    broadcasts: b.query<Broadcast[], void>({
+      query: () => 'broadcasts',
+      transformResponse: (r: { data: Broadcast[] }) => r.data,
+      providesTags: ['Broadcast'],
+    }),
+    broadcast: b.query<BroadcastDetail, number>({
+      query: (id) => `broadcasts/${id}`,
+      transformResponse: (r: { data: BroadcastDetail }) => r.data,
+      providesTags: (_r, _e, id) => [{ type: 'Broadcast', id }],
+    }),
+    broadcastRecipients: b.query<Paginated<BroadcastRecipientRow>, { id: number; filter?: string; page?: number }>({
+      query: ({ id, ...params }) => ({ url: `broadcasts/${id}/recipients`, params: clean(params) }),
+      providesTags: (_r, _e, { id }) => [{ type: 'Broadcast', id }],
+    }),
+    broadcastAudience: b.mutation<{ count: number; sample: { id: number; name: string; email: string }[] }, { conditions: Condition[] }>({
+      query: (body) => ({ url: 'broadcasts/audience', method: 'POST', body }),
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    saveBroadcast: b.mutation<Broadcast, BroadcastInput & { id?: number }>({
+      query: ({ id, ...body }) => ({ url: id ? `broadcasts/${id}` : 'broadcasts', method: id ? 'PUT' : 'POST', body }),
+      transformResponse: (r: { data: Broadcast }) => r.data,
+      invalidatesTags: ['Broadcast'],
+    }),
+    deleteBroadcast: b.mutation<void, number>({
+      query: (id) => ({ url: `broadcasts/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Broadcast'],
+    }),
+    launchBroadcast: b.mutation<Broadcast, { id: number; scheduled_at?: string }>({
+      query: ({ id, ...body }) => ({ url: `broadcasts/${id}/launch`, method: 'POST', body }),
+      transformResponse: (r: { data: Broadcast }) => r.data,
+      invalidatesTags: ['Broadcast', 'Activity', 'Inbox'],
+    }),
+    broadcastAction: b.mutation<Broadcast, { id: number; action: 'cancel' | 'pick-winner' }>({
+      query: ({ id, action }) => ({ url: `broadcasts/${id}/${action}`, method: 'POST' }),
+      transformResponse: (r: { data: Broadcast }) => r.data,
+      invalidatesTags: ['Broadcast'],
+    }),
+    attribution: b.query<AttributionResult, { by: string; range: string; from?: string; to?: string }>({
+      query: (params) => ({ url: 'reports/attribution', params: clean(params) }),
+      transformResponse: (r: { data: AttributionResult }) => r.data,
+      providesTags: ['Attribution'],
+    }),
     cancelCall: b.mutation<void, number>({
       query: (id) => ({ url: `calls/${id}/cancel`, method: 'POST' }),
       invalidatesTags: ['Call'],
@@ -774,7 +823,9 @@ export const {
   useLeadQueueQuery, useClaimLeadMutation, useMergeLeadMutation, useTrashQuery, useRestoreLeadMutation,
   useUpdateQualificationMutation, useInsightsQuery, useSendEmailMutation, usePreviewEmailMutation,
   useIntegrationsQuery, useSaveIntegrationMutation, useToggleIntegrationMutation, useDeleteIntegrationMutation, useTestIntegrationMutation,
-  useCallsQuery, useCallQuery, useCallStatsQuery, useCallLeadMutation, useLaunchCampaignMutation, useCancelCallMutation,
+  useCallsQuery, useCallQuery, useCallStatsQuery, useCallLeadMutation, useLaunchCampaignMutation, useCancelCallMutation, useSimulateInboundCallMutation,
+  useBroadcastsQuery, useBroadcastQuery, useBroadcastRecipientsQuery, useBroadcastAudienceMutation, useSaveBroadcastMutation,
+  useDeleteBroadcastMutation, useLaunchBroadcastMutation, useBroadcastActionMutation, useAttributionQuery,
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,
   useSaveReportMutation, useDeleteReportMutation, useSendReportMutation, useGoalsQuery, useSaveGoalMutation, useDeleteGoalMutation,

@@ -562,6 +562,7 @@ export interface IntegrationProvider {
 
 export interface AiAgent {
   id: number
+  mode: 'outbound' | 'inbound'
   name: string
   integration_id: number | null
   integration?: { id: number; provider: string; status: string } | null
@@ -587,6 +588,7 @@ export interface Call {
   agent?: { id: number; name: string; questions?: { key: string; question: string }[] | null } | null
   user?: { id: number; name: string } | null
   campaign_key: string | null
+  direction: 'outbound' | 'inbound'
   provider: string
   to_number: string
   status: CallStatus
@@ -903,3 +905,61 @@ export interface FieldPermissionSettings {
 }
 
 export interface FieldAccess { hidden: string[]; readonly: string[] }
+
+export interface BroadcastVariant { key: 'A' | 'B'; subject: string; body: string }
+
+export interface BroadcastInput {
+  name: string
+  campaign_id: number | null
+  conditions: Condition[]
+  variants: Omit<BroadcastVariant, 'key'>[]
+  test_percent: number
+  winner_metric: 'open' | 'click'
+  winner_after_hours: number
+}
+
+export type BroadcastStatus = 'draft' | 'scheduled' | 'testing' | 'sending' | 'sent' | 'canceled'
+
+export interface Broadcast extends Omit<BroadcastInput, 'variants'> {
+  id: number
+  variants: BroadcastVariant[]
+  status: BroadcastStatus
+  winner_key: 'A' | 'B' | null
+  scheduled_at: string | null
+  started_at: string | null
+  winner_at: string | null
+  sent_at: string | null
+  created_at: string
+  creator?: { id: number; name: string } | null
+  campaign?: { id: number; name: string } | null
+  summary?: { recipients: number; sent: number; open_rate: number; click_rate: number }
+}
+
+export interface BroadcastVariantStats { key: 'A' | 'B'; subject: string; sent: number; opened: number; clicked: number; open_rate: number; click_rate: number }
+
+export interface BroadcastDetail extends Broadcast {
+  stats: { recipients: number; sent: number; held: number; skipped: number; opened: number; clicked: number; open_rate: number; click_rate: number; variants: BroadcastVariantStats[] }
+}
+
+export interface BroadcastRecipientRow {
+  id: number
+  variant: 'A' | 'B' | null
+  status: 'queued' | 'held' | 'sent' | 'skipped' | 'failed'
+  reason: string | null
+  sent_at: string | null
+  opened_at: string | null
+  clicked_at: string | null
+  open_count: number
+  click_count: number
+  lead: { id: number; first_name: string; last_name: string | null; email: string | null; company: string | null } | null
+}
+
+export type AttributionModel = 'first' | 'last' | 'linear'
+type ByModel = Record<AttributionModel, number>
+
+export interface AttributionResult {
+  by: 'campaign' | 'source' | 'channel'
+  range: { preset: string; label: string; from: string; to: string }
+  rows: { key: string; label: string; touches: number; leads: ByModel; conversions: ByModel; revenue: ByModel | null }[]
+  totals: { leads: number; converted: number; revenue: number | null; touches: number }
+}

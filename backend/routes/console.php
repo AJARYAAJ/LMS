@@ -203,7 +203,7 @@ Artisan::command('broadcasts:run', function (BroadcastService $broadcasts) {
                     }
                 } catch (ValidationException $e) {
                     $broadcast->update(['status' => 'canceled']);
-                    $broadcast->creator?->notify(new AppNotification("“{$broadcast->name}” was not sent", collect($e->errors())->flatten()->first(), '/campaigns/email', 'campaign'));
+                    $broadcast->creator?->notify(new AppNotification("“{$broadcast->name}” was not sent", collect($e->errors())->flatten()->first(), '/campaigns?tab=email', 'campaign'));
                 }
             });
         });

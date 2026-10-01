@@ -75,7 +75,7 @@ export function CallDrawer({ callId, onClose }: { callId: number | null; onClose
             <p><span className="text-slate-500">Number: </span>{call.to_number}</p>
             <p><span className="text-slate-500">Provider: </span>{humanize(call.provider)}</p>
             <p><span className="text-slate-500">Started: </span>{dateTime(call.started_at ?? call.created_at)}</p>
-            <p><span className="text-slate-500">By: </span>{call.user?.name ?? (call.campaign_key ? 'Campaign' : 'Automation')}</p>
+            <p><span className="text-slate-500">{call.direction === 'inbound' ? 'Type: ' : 'By: '}</span>{call.direction === 'inbound' ? 'Incoming call' : call.user?.name ?? (call.campaign_key ? 'Campaign' : 'Automation')}</p>
           </div>
           {call.error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{call.error}</p>}
           {live && (
@@ -144,7 +144,7 @@ export function AiCallButton({ leadId, phone }: { leadId: number; phone: string 
   const [agentId, setAgentId] = useState('')
   const [callId, setCallId] = useState<number | null>(null)
   const [viewing, setViewing] = useState<number | null>(null)
-  const active = agents?.filter((a) => a.is_active) ?? []
+  const active = agents?.filter((a) => a.is_active && a.mode !== 'inbound') ?? []
   const { data: call } = useCallQuery(callId ?? 0, { skip: !callId, pollingInterval: 2500 })
 
   useEffect(() => {
