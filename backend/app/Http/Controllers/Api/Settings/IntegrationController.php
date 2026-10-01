@@ -120,6 +120,8 @@ class IntegrationController extends Controller
                     ->get('https://api.retellai.com/get-agent/'.$i->setting('agent_id')), 'Retell agent verified.'),
                 'bland' => $i->setting('api_key') ? 'Bland API key saved. It is verified on the first call.' : throw new \RuntimeException('Missing API key.'),
                 'simulator' => 'The simulator is ready — no credentials needed.',
+                'deepgram' => $this->check(Http::withHeaders(['Authorization' => 'Token '.$i->setting('api_key')])->timeout(10)
+                    ->get('https://api.deepgram.com/v1/projects'), 'Deepgram key verified.'),
                 'anthropic' => (function () use ($i) {
                     (new Client(apiKey: $i->setting('api_key'), requestOptions: ['timeout' => 15, 'maxRetries' => 0]))
                         ->models->retrieve($i->setting('model') ?: config('services.anthropic.model'));

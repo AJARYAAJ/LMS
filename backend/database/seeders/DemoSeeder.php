@@ -6,6 +6,7 @@ use App\Jobs\SimulateCallResult;
 use App\Models\Activity;
 use App\Models\AiAgent;
 use App\Models\AssignmentRule;
+use App\Models\BookingPage;
 use App\Models\Campaign;
 use App\Models\Dashboard;
 use App\Models\Deal;
@@ -266,6 +267,10 @@ class DemoSeeder extends Seeder
                     $quotes->respond($quote, true, 'Jamie Buyer', null, '127.0.0.1');
                 }
             });
+
+            foreach ([[$admin, 'avery', 'Intro call with Avery'], [$reps->first(), 'riley', 'Discovery call with Riley']] as [$host, $slug, $title]) {
+                BookingPage::create(['user_id' => $host->id, 'slug' => $slug, 'title' => $title, 'description' => 'A quick call to understand your goals and see if we are a fit.', 'duration_minutes' => 30, 'weekdays' => [1, 2, 3, 4, 5], 'start_time' => '09:00', 'end_time' => '17:00', 'timezone' => 'UTC']);
+            }
 
             $reports = SavedReport::orderBy('id')->pluck('id');
             Dashboard::create(['user_id' => $admin->id, 'name' => 'Sales leadership', 'is_shared' => true, 'tiles' => [

@@ -48,6 +48,7 @@ class Lead extends Model
             'next_follow_up_at' => 'datetime',
             'last_contacted_at' => 'datetime',
             'first_responded_at' => 'datetime',
+            'inbox_read_at' => 'datetime',
             'conversion_likelihood' => 'integer',
             'sla_alerted_at' => 'datetime',
             'assigned_at' => 'datetime',

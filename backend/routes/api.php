@@ -4,13 +4,17 @@ use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\CalendarFeedController;
 use App\Http\Controllers\Api\CallController;
+use App\Http\Controllers\Api\CallNotesController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DashboardBuilderController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DealController;
 use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\InboundWebhookController;
+use App\Http\Controllers\Api\InboxController;
 use App\Http\Controllers\Api\LeadCaptureController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\LeadImportController;
@@ -44,6 +48,9 @@ Route::prefix('v1')->group(function () {
     // Vendor callbacks (secret token in the URL identifies the organization)
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('public/quotes/{token}', [PublicQuoteController::class, 'show'])->where('token', '[A-Za-z0-9]{40}');
+        Route::get('public/book/{slug}', [BookingController::class, 'publicShow'])->where('slug', '[a-z0-9-]+');
+        Route::post('public/book/{slug}', [BookingController::class, 'book'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1');
+        Route::get('public/calendar/{token}.ics', [CalendarFeedController::class, 'feed'])->where('token', '[A-Za-z0-9]{40}');
         Route::post('public/quotes/{token}/respond', [PublicQuoteController::class, 'respond'])->where('token', '[A-Za-z0-9]{40}');
     });
 
@@ -149,6 +156,15 @@ Route::prefix('v1')->group(function () {
         // CRM
         Route::get('deals/board', [DealController::class, 'board']);
         Route::get('deals/forecast', [DealController::class, 'forecast']);
+        Route::get('inbox', [InboxController::class, 'index']);
+        Route::get('inbox/summary', [InboxController::class, 'summary']);
+        Route::get('inbox/{leadId}', [InboxController::class, 'show'])->whereNumber('leadId');
+        Route::get('booking-page', [BookingController::class, 'mine']);
+        Route::put('booking-page', [BookingController::class, 'save']);
+        Route::get('booking-page/suggest', [BookingController::class, 'suggestSlug']);
+        Route::get('auth/calendar-feed', [CalendarFeedController::class, 'token']);
+        Route::post('auth/calendar-feed', [CalendarFeedController::class, 'token']);
+        Route::post('leads/{leadId}/call-notes', [CallNotesController::class, 'store'])->whereNumber('leadId')->middleware('throttle:30,1');
         Route::get('deals/{dealId}/quotes', [QuoteController::class, 'index'])->whereNumber('dealId');
         Route::post('deals/{dealId}/quotes', [QuoteController::class, 'store'])->whereNumber('dealId');
         Route::get('quotes/{id}', [QuoteController::class, 'show'])->whereNumber('id');

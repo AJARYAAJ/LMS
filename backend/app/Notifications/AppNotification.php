@@ -23,6 +23,7 @@ class AppNotification extends Notification
         'inbound_message' => ['label' => 'A lead replies by SMS / WhatsApp', 'in_app' => true, 'email' => true, 'browser' => true],
         'reminder' => ['label' => 'A task is due or overdue', 'in_app' => true, 'email' => false, 'browser' => true],
         'automation' => ['label' => 'A workflow notifies me', 'in_app' => true, 'email' => false, 'browser' => false],
+        'booking' => ['label' => 'Someone books a meeting with me', 'in_app' => true, 'email' => true, 'browser' => true],
         'quote' => ['label' => 'A customer accepts or declines a quote', 'in_app' => true, 'email' => true, 'browser' => true],
         'sla' => ['label' => 'A new lead is waiting past the response target', 'in_app' => true, 'email' => true, 'browser' => true],
     ];

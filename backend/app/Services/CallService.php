@@ -121,6 +121,34 @@ class CallService
         return ['campaign_key' => $key, 'queued' => $queued, 'skipped' => $skipped];
     }
 
+    /**
+     * A call a person made themselves (pasted notes / transcript or an uploaded recording):
+     * stored as a call and analysed exactly like an AI call.
+     *
+     * @param  list<array{role: string, text: string}>  $transcript
+     */
+    public function logHumanCall(Lead $lead, User $actor, array $transcript, ?int $durationMinutes = null, ?string $recordingUrl = null): Call
+    {
+        $call = Call::create([
+            'organization_id' => $lead->organization_id,
+            'lead_id' => $lead->id,
+            'user_id' => $actor->id,
+            'provider' => 'manual',
+            'direction' => 'outbound',
+            'to_number' => preg_replace('/[^\d+]/', '', (string) $lead->phone),
+            'status' => 'in_progress',
+            'started_at' => now()->subMinutes($durationMinutes ?? 0),
+        ]);
+
+        return $this->update($call, [
+            'status' => 'completed',
+            'final' => true,
+            'transcript' => $transcript,
+            'duration_seconds' => $durationMinutes ? $durationMinutes * 60 : null,
+            'recording_url' => $recordingUrl,
+        ]);
+    }
+
     /** Apply a normalised vendor update (from a webhook or the simulator). */
     public function update(Call $call, array $data): Call
     {
@@ -172,7 +200,11 @@ class CallService
         }
 
         $label = Str::headline($analysis['outcome']);
-        $this->activities->record($lead, 'call', "AI call — {$label}", [
+        $manual = $call->provider === 'manual';
+        if (! $call->summary) {
+            $call->forceFill(['summary' => "{$label}.".($analysis['next_step'] ? " Next step: {$analysis['next_step']}." : '')])->save();
+        }
+        $this->activities->record($lead, 'call', ($manual ? 'Call' : 'AI call')." — {$label}", [
             'user_id' => $call->user_id,
             'description' => $call->summary,
             'direction' => 'outbound',
@@ -203,9 +235,10 @@ class CallService
         app(ScoringEngine::class)->recalculate($lead);
 
         $recipient = $lead->owner ?? $call->user;
-        if ($recipient && ! in_array($analysis['outcome'], ['no_answer'], true)) {
+        // People who logged the call themselves don't need a notification about it.
+        if ($recipient && ! in_array($analysis['outcome'], ['no_answer'], true) && ! ($manual && $recipient->id === $call->user_id)) {
             $recipient->notify(new AppNotification(
-                "AI call: {$label} — {$lead->full_name}",
+                ($manual ? 'Call' : 'AI call').": {$label} — {$lead->full_name}",
                 (string) $call->summary,
                 "/leads/{$lead->id}",
                 'ai_call',

@@ -13,6 +13,7 @@ class Catalog
         'messaging' => 'SMS & WhatsApp',
         'voice' => 'AI voice calling',
         'ai' => 'AI assistant',
+        'transcription' => 'Call transcription',
         'chat' => 'Team chat alerts',
     ];
 
@@ -87,10 +88,17 @@ class Catalog
                 'fields' => [],
             ],
             'anthropic' => [
-                'category' => 'ai', 'name' => 'Anthropic Claude', 'description' => 'Powers AI lead briefs.',
+                'category' => 'ai', 'name' => 'Anthropic Claude', 'description' => 'Powers AI lead briefs, call analysis and plain-English reports.',
                 'fields' => [
                     ['key' => 'api_key', 'label' => 'API key', 'required' => true, 'secret' => true],
                     ['key' => 'model', 'label' => 'Model', 'placeholder' => 'claude-opus-5'],
+                ],
+            ],
+            'deepgram' => [
+                'category' => 'transcription', 'name' => 'Deepgram', 'description' => 'Turns uploaded call recordings into speaker-separated transcripts for call analysis.',
+                'fields' => [
+                    ['key' => 'api_key', 'label' => 'API key', 'required' => true, 'secret' => true],
+                    ['key' => 'model', 'label' => 'Model', 'placeholder' => 'nova-3'],
                 ],
             ],
             'slack' => [
