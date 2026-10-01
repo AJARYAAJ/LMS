@@ -117,27 +117,42 @@ Measured with 5,000 leads / 20,000 activities and a real browser:
 
 Measured on PostgreSQL with 5,000 leads / 20,000 activities / 1,000 deals: each report page returns in 34–131 ms.
 
-## 8. Roadmap — ideas for the next iterations
+## 8. Iteration 6 — the roadmap, built
 
-Grouped by the job they do. "Next" items reuse what already exists (report engine, integrations hub, AI layer, automation) and are the cheapest wins.
+Everything marked "Next" and most of "Later" in the previous roadmap is now in the product.
 
-| Area | Idea | Builds on | When |
+| Area | Feature | Pattern | Status |
 |---|---|---|---|
-| Reports | **Ask in plain English** — "won revenue by rep this quarter" → Claude writes the report spec, the engine runs it | report engine spec is JSON; Anthropic integration | Next |
-| Reports | Dashboard builder: several named dashboards, drag-and-drop tiles, shared team dashboards | saved reports + pinning | Next |
-| Reports | Time-to-convert and speed-to-lead (first response time) reports, SLA alerts | status history, activities | Next |
-| Reports | Report subscriptions to Slack / Teams channels | ChatAlerts + scheduled reports | Next |
-| Engagement | Two-way Gmail / Outlook sync with open and click tracking | email integrations | Later |
-| Engagement | Calendar sync and public booking links (meeting scheduler) | tasks, AI agents booking meetings | Later |
-| Engagement | Shared conversations inbox for SMS / WhatsApp threads | inbound messaging webhook | Next |
-| AI | Inbound AI receptionist (answers calls, qualifies, routes to the owner) | voice providers, assignment engine | Later |
-| AI | Predictive lead score trained on won / lost history, shown beside the rule score | scoring engine, deals | Later |
-| AI | Conversation intelligence for human calls (upload recording → transcript, summary, next step) | CallAnalyzer | Next |
-| Sales | Products, price books, quotes with PDF and e-signature | deals | Later |
-| Sales | Forecast categories (commit / best case) with manager roll-up | deals, goals | Next |
-| Sales | Multiple pipelines (per product or region) | pipeline stages | Later |
-| Marketing | Email campaigns with A/B tests and multi-touch attribution | campaigns, sequences, UTM capture | Later |
-| Platform | SSO (Google / SAML), two-factor sign-in, field-level permissions | Sanctum, roles | Next |
-| Platform | GDPR tools: consent tracking, export / erase a person | audit log | Next |
-| Platform | Zapier / Make connector and OAuth apps for the public API | API keys, webhooks | Later |
-| Platform | Native mobile shell for the PWA with push notifications | PWA, notification preferences | Later |
+| Reports | **Ask in plain English** — "won revenue by rep this quarter" becomes a report spec (Claude with structured output, rule-based fallback without a key), run by the report engine and saveable | HubSpot AI report assistant | ✅ |
+| Reports | **Dashboards** — several named dashboards per person or shared with the team, tiles from saved reports, reorder and resize | Salesforce dashboards | ✅ |
+| Reports | **Speed to lead** — first-response time on every lead, response-target (SLA) alerts to the owner and managers, response metrics in the report engine | Salesforce lead response SLAs | ✅ |
+| Reports | Scheduled reports delivered to **Slack / Teams** as well as email | Salesforce report subscriptions to Slack | ✅ |
+| Sales | **Multiple pipelines** with their own stages; board and reports per pipeline | Pipedrive / HubSpot pipelines | ✅ |
+| Sales | **Forecast** — commit / best case / pipeline / closed by month and owner, overrides, quota from goals | Salesforce forecast categories | ✅ |
+| Sales | **Products and quotes** — catalogue, line items with discounts and tax, quote email with a public page, **typed e-signature** (accept / decline), printable PDF; acceptance wins the deal | HubSpot quotes / Zoho CPQ | ✅ |
+| AI | **Predictive conversion score** — learned per organization from won / lost history, shown next to the rule score with its top reasons, refreshed hourly | Salesforce Einstein lead scoring | ✅ |
+| Engagement | **Shared inbox** — SMS, WhatsApp and email threads per lead, unread / needs-reply filters, reply on any channel | HubSpot conversations inbox | ✅ |
+| Engagement | **Booking links** — personal "book a meeting" page with working hours, buffers and notice; bookings create or match the lead, add the meeting and notify the host | Calendly / HubSpot meetings | ✅ |
+| Engagement | **Calendar feed** (iCal) of tasks and meetings for Google / Outlook / Apple Calendar | — | ✅ |
+| AI | **Call notes intelligence** — paste notes or upload a recording (Deepgram) → transcript, summary, outcome, next step and follow-up task | Gong / HubSpot call intelligence | ✅ |
+| Platform | **Two-step sign-in** (authenticator app + recovery codes) | — | ✅ |
+| Platform | **Consent and GDPR** — per-channel consent with source and time, one-click unsubscribe link in emails, STOP keywords for SMS/WhatsApp, export or erase a person | HubSpot GDPR tools | ✅ |
+| Platform | **Field-level permissions** — hide or make read-only any lead / contact / account / deal field per role; enforced in the API, layouts and reports | Salesforce field-level security | ✅ |
+| Platform | **REST hooks** for Zapier / Make (subscribe / unsubscribe, sample payloads, polling triggers) | Zapier REST hooks | ✅ |
+| Marketing | **Email campaigns** — audience from the segment builder (people who opted out are skipped), personalised content, **A/B test** two versions on a share of the audience and send the winner (by opens or clicks) to the rest automatically, schedule for later, open pixel and signed click tracking, recipient drill-down | Mailchimp / HubSpot marketing email | ✅ |
+| Marketing | **Multi-touch attribution** — touches recorded on capture, web form, booking, inbound call and email click; first touch / last touch / linear credit for leads, conversions and won revenue by campaign, source or channel | HubSpot attribution reports | ✅ |
+| AI | **AI receptionist** — inbound voice agents answer calls (Vapi / Retell inbound, or the simulator's "Test call"), match the caller by phone or create a lead, learn their name and company, qualify, book or schedule a callback, and notify the owner | AI receptionists | ✅ |
+
+Honest limits: vendor paths that need live accounts (Deepgram transcription, Vapi / Retell inbound calls, SendGrid HTML email) are built to the vendors' documented formats and covered by faked HTTP tests, but were not exercised against the real services. Email opens come from a tracking pixel, so they are approximate (image blocking hides opens; privacy proxies can inflate them); clicks are reliable.
+
+## 9. Roadmap — what is left
+
+| Area | Idea | Builds on |
+|---|---|---|
+| Platform | SSO (Google / Microsoft / SAML) | Sanctum, two-step sign-in |
+| Engagement | Two-way Gmail / Outlook mailbox sync (replies land in the inbox automatically) | inbox, email integrations |
+| Engagement | Two-way calendar sync (busy times from Google / Outlook block booking slots) | booking links, calendar feed |
+| Platform | Native mobile shell for the PWA with push notifications | PWA, notification preferences |
+| Platform | OAuth apps for the public API (instead of API keys) | API keys, REST hooks |
+| Marketing | Landing pages and UTM-aware link builder | web forms, attribution |
+| AI | Warm transfer from the receptionist to the owner's phone | AI receptionist, voice vendors |
