@@ -16,3 +16,18 @@ export async function downloadFile(path: string, params: Record<string, string |
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/** Build a CSV (quoted where needed) in the browser and download it. */
+export function downloadCsv(filename: string, rows: (string | number | null | undefined)[][]) {
+  const cell = (v: string | number | null | undefined) => {
+    const s = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const blob = new Blob([rows.map((r) => r.map(cell).join(',')).join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}

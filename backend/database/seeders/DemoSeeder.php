@@ -182,6 +182,16 @@ class DemoSeeder extends Seeder
                 ]);
             });
 
+            // A few lost deals with reasons, so loss analysis has something to show.
+            $lostStage = $stages->firstWhere('is_lost', true);
+            if ($lostStage) {
+                Deal::where('status', 'open')->inRandomOrder()->limit(3)->get()->each(fn (Deal $deal) => $deal->update([
+                    'pipeline_stage_id' => $lostStage->id, 'status' => 'lost', 'probability' => 0,
+                    'lost_reason' => $faker->randomElement(['Budget', 'Went with competitor', 'No decision', 'Timing']),
+                    'closed_at' => now()->subDays(random_int(1, 25)),
+                ]));
+            }
+
             // Report studio examples (two pinned to the admin's dashboard) and this month's goals.
             foreach ([
                 ['Revenue by owner this quarter', ['entity' => 'deals', 'metric' => 'won_amount', 'dimension' => 'owner', 'date_field' => 'closed', 'range' => 'this_quarter', 'chart' => 'bar'], true, 'weekly'],

@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -134,6 +134,59 @@ export const api = createApi({
       query: (params) => ({ url: 'reports/leads', params: clean(params) }),
       transformResponse: (r: { data: ReportData }) => r.data,
       providesTags: ['Reports'],
+    }),
+    reportCatalog: b.query<ReportCatalog, void>({
+      query: () => 'reports/catalog',
+      transformResponse: (r: { data: ReportCatalog }) => r.data,
+      keepUnusedDataFor: 3600,
+    }),
+    // Reports are computed from everything else, so any change that refreshes the dashboard refreshes them too.
+    runReport: b.query<ReportResult, ReportSpec>({
+      query: (spec) => ({ url: 'reports/run', method: 'POST', body: { spec } }),
+      transformResponse: (r: { data: ReportResult }) => r.data,
+      providesTags: ['Reports', 'Dashboard'],
+    }),
+    typeReport: b.query<TypeReport, { type: string; range?: string; from?: string; to?: string }>({
+      query: ({ type, ...params }) => ({ url: `reports/type/${type}`, params: clean(params) }),
+      transformResponse: (r: { data: TypeReport }) => r.data,
+      providesTags: ['Reports', 'Dashboard'],
+    }),
+    savedReports: b.query<SavedReport[], { pinned?: boolean } | void>({
+      query: (p) => ({ url: 'saved-reports', params: p?.pinned ? { pinned: 1 } : undefined }),
+      transformResponse: (r: { data: SavedReport[] }) => r.data,
+      providesTags: ['SavedReport'],
+    }),
+    runSavedReport: b.query<ReportResult, { id: number; range?: string }>({
+      query: ({ id, range }) => ({ url: `saved-reports/${id}/run`, params: clean({ range }) }),
+      transformResponse: (r: { data: ReportResult }) => r.data,
+      providesTags: (_r, _e, { id }) => [{ type: 'SavedReport', id }, 'Reports', 'Dashboard'],
+    }),
+    saveReport: b.mutation<SavedReport, Partial<SavedReport> & { id?: number }>({
+      query: ({ id, ...body }) => ({ url: id ? `saved-reports/${id}` : 'saved-reports', method: id ? 'PATCH' : 'POST', body }),
+      transformResponse: (r: { data: SavedReport }) => r.data,
+      invalidatesTags: ['SavedReport'],
+    }),
+    deleteReport: b.mutation<void, number>({
+      query: (id) => ({ url: `saved-reports/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['SavedReport'],
+    }),
+    sendReport: b.mutation<{ message: string }, number>({
+      query: (id) => ({ url: `saved-reports/${id}/send`, method: 'POST' }),
+      invalidatesTags: ['SavedReport'],
+    }),
+    goals: b.query<Goal[], { mine?: boolean } | void>({
+      query: (p) => ({ url: 'goals', params: p?.mine ? { mine: 1 } : undefined }),
+      transformResponse: (r: { data: Goal[] }) => r.data,
+      providesTags: ['Goal', 'Dashboard'],
+    }),
+    saveGoal: b.mutation<Goal, { id?: number; user_id?: number | null; metric?: string; period?: string; target?: number }>({
+      query: ({ id, ...body }) => ({ url: id ? `goals/${id}` : 'goals', method: id ? 'PATCH' : 'POST', body }),
+      transformResponse: (r: { data: Goal }) => r.data,
+      invalidatesTags: ['Goal'],
+    }),
+    deleteGoal: b.mutation<void, number>({
+      query: (id) => ({ url: `goals/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Goal'],
     }),
     activityFeed: b.query<Activity[], number | void>({
       query: (limit) => ({ url: 'activities/feed', params: { limit: limit ?? 15 } }),
@@ -550,6 +603,8 @@ export const {
   useIntegrationsQuery, useSaveIntegrationMutation, useToggleIntegrationMutation, useDeleteIntegrationMutation, useTestIntegrationMutation,
   useCallsQuery, useCallQuery, useCallStatsQuery, useCallLeadMutation, useLaunchCampaignMutation, useCancelCallMutation,
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
+  useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,
+  useSaveReportMutation, useDeleteReportMutation, useSendReportMutation, useGoalsQuery, useSaveGoalMutation, useDeleteGoalMutation,
   useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
 

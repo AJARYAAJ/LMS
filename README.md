@@ -23,7 +23,9 @@ See [`docs/PLAN_OF_ACTION.md`](docs/PLAN_OF_ACTION.md) for the feature-parity ma
 | Engagement | Activity logging, **email templates with merge fields + send**, **SMS & WhatsApp sending (Twilio)**, **sequences/cadences**, task calendar, reminders, notes & tasks on every record |
 | Automation | WHEN / IF / THEN workflow builder (tasks, notifications, field updates, tags, status, assignment, notes) with execution log |
 | Pipeline | Drag-and-drop deal board, weighted forecast, deal/contact/account workspaces |
-| Analytics | Dashboard (KPIs, lead flow, sources, stages, temperature, engagement heatmap), funnel, source ROI, team leaderboard, campaign cost-per-lead, lead aging |
+| Analytics | **Insights hub with a report page per area** — Leads, Pipeline, Activities, Tasks, AI calls, Messaging — each with KPI tiles (change vs previous period) and charts; lead funnel, source ROI, team leaderboard, campaign cost-per-lead, lead aging; date-range presets or custom dates; every chart has a table view and CSV export |
+| Report studio | Build any report (record type × measure × grouping × split × filters × chart), save it, share it, **pin it to the dashboard**, email it now or **weekly / monthly** |
+| Goals | Monthly or quarterly targets for each person or the whole team (revenue, deals, leads, conversions, activities, calls, meetings, tasks) with pace tracking on the dashboard |
 | Common | Global search / command palette, notifications centre + page, saved views, **advanced segment builder**, custom fields on leads/contacts/accounts/deals, **custom page layouts** (drag-and-drop sections, hidden fields, live preview), **installable PWA**, bulk actions, **merge duplicates**, **recycle bin**, audit log, profile & theme, custom fields, teams, RBAC |
 | Integrations | **Vendor hub** in Settings → Integrations: SMTP, SendGrid, Twilio (SMS/WhatsApp + inbound), WhatsApp Cloud API, Vapi, Retell, Bland, Anthropic, Slack, Teams — secrets are encrypted per organization, each has a Test button and copyable inbound webhook URL. Plus signed outbound webhooks (HMAC-SHA256, retries), API keys, REST API under `/api/v1` |
 
@@ -52,13 +54,13 @@ npm run dev                             # http://localhost:5173 (proxies /api to
 
 Demo logins (password `password`): `admin@lms.test`, `manager@lms.test`, `riley@lms.test` (sales rep), `viewer@lms.test`.
 
-Optional integrations (see `backend/.env.example`): `ANTHROPIC_API_KEY` for AI briefs, `MESSAGING_DRIVER=twilio` + `TWILIO_*` for real SMS/WhatsApp, `MAIL_*` for email delivery (docker-compose ships Mailpit).
+Vendors (email, SMS/WhatsApp, AI voice, Claude, Slack/Teams) are connected per organization in **Settings → Integrations**; the `backend/.env.example` values are server-wide fallbacks. The demo organization comes with the AI call simulator connected.
 
-Optional background processes:
+Background processes (needed for AI calls, webhooks and anything scheduled):
 
 ```bash
-php artisan queue:work        # webhook deliveries (QUEUE_CONNECTION=database)
-php artisan schedule:work     # task reminders every 5 minutes
+php artisan queue:work        # AI calls, webhook deliveries (QUEUE_CONNECTION=database)
+php artisan schedule:work     # task reminders (5 min), morning digest, scheduled report emails
 ```
 
 ## Tests & checks
@@ -88,5 +90,7 @@ All endpoints are under `/api/v1` and require `Authorization: Bearer <token>` ex
 | GET/PUT | `auth/notification-preferences`, POST `notifications/test` | Notification preferences |
 | * | `settings/integrations`, `settings/ai-agents` | Vendor connections, voice agents |
 | POST | `webhooks/voice/{vapi\|retell\|bland}/{token}`, `webhooks/messaging/twilio/{token}` | Inbound vendor callbacks (per-organization token) |
+| GET | `reports/catalog`, `reports/type/{leads\|pipeline\|activities\|tasks\|calls\|messaging}` · POST `reports/run` | Report engine and type-wise report pages |
+| * | `saved-reports`, `saved-reports/{id}/run`, POST `saved-reports/{id}/send`, `goals` | Saved / scheduled reports and goals |
 | GET/POST | `forms/{slug}` | Public hosted form |
 | POST | `capture/leads` | Server-to-server capture (`X-Api-Key`) |

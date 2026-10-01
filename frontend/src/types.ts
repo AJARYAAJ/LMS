@@ -607,3 +607,110 @@ export interface NotificationPrefs {
   digest: boolean
   chat_alert_kinds: string[]
 }
+
+// ------------------------------------------------------------ reports & goals
+export type ReportEntity = 'leads' | 'deals' | 'activities' | 'tasks' | 'calls'
+export type ReportChartType = 'bar' | 'stacked' | 'line' | 'area' | 'pie' | 'table' | 'number'
+export type ReportFormat = 'number' | 'money' | 'percent' | 'decimal' | 'duration'
+
+export interface ReportSpec {
+  entity: ReportEntity
+  metric: string
+  dimension?: string | null
+  split?: string | null
+  date_field?: string | null
+  filters?: Record<string, (string | number | null)[]>
+  chart?: ReportChartType
+  range?: string
+  from?: string | null
+  to?: string | null
+  granularity?: 'day' | 'week' | 'month' | null
+  limit?: number
+}
+
+export interface ReportRow {
+  key: string
+  label: string
+  color: string | null
+  value: number
+  values?: Record<string, number>
+}
+
+export interface ReportResult {
+  spec: Required<Pick<ReportSpec, 'entity' | 'metric' | 'chart' | 'range'>> & ReportSpec
+  entity_label: string
+  metric_label: string
+  dimension_label: string | null
+  split_label: string | null
+  dimension_type: 'date' | 'model' | 'enum' | 'text' | null
+  format: ReportFormat
+  granularity: 'day' | 'week' | 'month' | null
+  range: { preset: string; label: string; from: string; to: string }
+  total: number
+  rows: ReportRow[]
+  series: { key: string; label: string; color: string | null }[]
+  report?: { id: number; name: string; description: string | null }
+}
+
+export interface ReportCatalog {
+  entities: {
+    key: ReportEntity
+    label: string
+    dimensions: { key: string; label: string; type: 'date' | 'model' | 'enum' | 'text'; filterable: boolean; values: { value: string; label: string }[] | null }[]
+    metrics: { key: string; label: string; format: ReportFormat }[]
+  }[]
+  ranges: { key: string; label: string }[]
+  charts: ReportChartType[]
+  types: { key: string; label: string }[]
+  goal_metrics: { key: string; label: string; format: ReportFormat }[]
+}
+
+export interface ReportKpi {
+  label: string
+  value: number
+  previous: number
+  delta: number | null
+  delta_unit: '%' | 'pts'
+  format: ReportFormat
+  better: 'up' | 'down'
+}
+
+export interface TypeReport {
+  type: string
+  title: string
+  range: ReportResult['range']
+  kpis: ReportKpi[]
+  widgets: { title: string; subtitle: string | null; span: 1 | 2; result: ReportResult }[]
+}
+
+export interface SavedReport {
+  id: number
+  user_id: number
+  user?: { id: number; name: string } | null
+  name: string
+  description: string | null
+  spec: ReportSpec
+  is_shared: boolean
+  pinned: boolean
+  schedule: 'none' | 'weekly' | 'monthly'
+  recipients: string[] | null
+  last_sent_at: string | null
+  created_at: string
+}
+
+export interface Goal {
+  id: number
+  metric: string
+  metric_label: string
+  format: ReportFormat
+  period: 'month' | 'quarter'
+  period_label: string
+  user: { id: number; name: string; avatar_color: string | null } | null
+  user_id: number | null
+  target: number
+  actual: number
+  percent: number
+  expected_percent: number
+  status: 'achieved' | 'on_track' | 'behind'
+  days_left: number
+}

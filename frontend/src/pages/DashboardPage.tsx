@@ -6,10 +6,12 @@ import {
   AlarmClock, ArrowRight, CalendarCheck, CheckCircle2, CircleDollarSign, Clock, Flame, Inbox, LayoutDashboard, Percent, Target, Trophy, Users,
 } from 'lucide-react'
 import { useAppSelector } from '@/app/hooks'
-import { useActivityFeedQuery, useDashboardQuery, useToggleTaskMutation } from '@/services/api'
+import { useActivityFeedQuery, useDashboardQuery, useGoalsQuery, useToggleTaskMutation } from '@/services/api'
 import { Avatar, Card, EmptyState, PageHeader, ScoreRing, Skeleton, StatCard } from '@/components/ui'
 import { StatusBadge } from '@/components/crm/Badges'
 import { Timeline } from '@/components/crm/Timeline'
+import { PinnedReports } from '@/components/reports/PinnedReports'
+import { GoalsWidget } from '@/pages/reports/GoalsView'
 import { ChartTooltip } from '@/components/crm/ChartTooltip'
 import { friendlyDue, money, number, percent } from '@/lib/format'
 import { RATING_META } from '@/lib/constants'
@@ -25,6 +27,7 @@ export function DashboardPage() {
   const currency = user?.organization?.currency ?? 'USD'
   const { data, isLoading } = useDashboardQuery(undefined, { pollingInterval: 60_000 })
   const { data: feed } = useActivityFeedQuery(12)
+  const { data: goals } = useGoalsQuery({ mine: true })
   const [toggleTask] = useToggleTaskMutation()
 
   if (isLoading || !data) {
@@ -225,7 +228,14 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <ActivityHeatmap days={data.heatmap} />
+      {goals?.length ? (
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2"><ActivityHeatmap days={data.heatmap} /></div>
+          <GoalsWidget />
+        </div>
+      ) : <ActivityHeatmap days={data.heatmap} />}
+
+      <PinnedReports />
 
       <p className="flex items-center justify-center gap-2 pt-2 text-xs text-slate-400">
         <Avatar name={user?.organization?.name} size="xs" /> {user?.organization?.name} · data refreshes every minute

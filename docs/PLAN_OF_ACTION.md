@@ -103,3 +103,41 @@ Measured with 5,000 leads / 20,000 activities and a real browser:
 | **Daily email digest** — today's tasks, overdue follow-ups, new leads | Salesforce/HubSpot daily digests | 🆕 |
 | **Inbound SMS/WhatsApp** — replies land on the lead timeline and notify the owner | two-way messaging | 🆕 |
 | Real Web Push while the app is closed (VAPID) | — | ⏭ (browser notifications work while the app is open or installed) |
+
+## 7. Iteration 5 — Reports for every area, report studio, goals
+
+| Feature | Pattern | Status |
+|---|---|---|
+| **Report engine** — one whitelisted spec format (record type, measure, grouping, split, filters, date field, range) compiled to a single grouped SQL query on SQLite and PostgreSQL; dates bucketed by day / week / month with empty buckets filled; long tails folded into "Other"; every measure built from additive sums so rates stay correct when merged | Salesforce report types / HubSpot custom report builder | ✅ |
+| **Type-wise report pages** — Leads, Pipeline, Activities, Tasks, AI calls, Messaging: KPI tiles with change vs the previous period plus 4–7 charts each (stacked time series, donuts, ranked bars, tables) | Zoho Analytics prebuilt dashboards | ✅ |
+| **Report studio** — build any report with live preview, quick-start ideas, filters on fixed-choice fields, bar / stacked / line / area / donut / table / single-number charts, CSV export, table view on every chart | HubSpot custom report builder | ✅ |
+| **Saved reports** — private or shared with the organization, pin to dashboard, email now, or schedule weekly (Mondays) / monthly (1st) to up to 10 recipients | Salesforce report subscriptions | ✅ |
+| **Goals** — monthly or quarterly targets per person or the whole team (revenue won, deals won, new leads, conversions, activities, calls, meetings, AI-booked meetings, tasks completed) with pace marker and achieved / on track / behind status; on the dashboard and in Insights | HubSpot goals / Salesforce quotas | ✅ |
+| Chart colours — fixed-order categorical palette validated for colour-vision deficiency in light and dark; single-series charts use one colour; ≥2 series always have a legend | — | ✅ |
+
+Measured on PostgreSQL with 5,000 leads / 20,000 activities / 1,000 deals: each report page returns in 34–131 ms.
+
+## 8. Roadmap — ideas for the next iterations
+
+Grouped by the job they do. "Next" items reuse what already exists (report engine, integrations hub, AI layer, automation) and are the cheapest wins.
+
+| Area | Idea | Builds on | When |
+|---|---|---|---|
+| Reports | **Ask in plain English** — "won revenue by rep this quarter" → Claude writes the report spec, the engine runs it | report engine spec is JSON; Anthropic integration | Next |
+| Reports | Dashboard builder: several named dashboards, drag-and-drop tiles, shared team dashboards | saved reports + pinning | Next |
+| Reports | Time-to-convert and speed-to-lead (first response time) reports, SLA alerts | status history, activities | Next |
+| Reports | Report subscriptions to Slack / Teams channels | ChatAlerts + scheduled reports | Next |
+| Engagement | Two-way Gmail / Outlook sync with open and click tracking | email integrations | Later |
+| Engagement | Calendar sync and public booking links (meeting scheduler) | tasks, AI agents booking meetings | Later |
+| Engagement | Shared conversations inbox for SMS / WhatsApp threads | inbound messaging webhook | Next |
+| AI | Inbound AI receptionist (answers calls, qualifies, routes to the owner) | voice providers, assignment engine | Later |
+| AI | Predictive lead score trained on won / lost history, shown beside the rule score | scoring engine, deals | Later |
+| AI | Conversation intelligence for human calls (upload recording → transcript, summary, next step) | CallAnalyzer | Next |
+| Sales | Products, price books, quotes with PDF and e-signature | deals | Later |
+| Sales | Forecast categories (commit / best case) with manager roll-up | deals, goals | Next |
+| Sales | Multiple pipelines (per product or region) | pipeline stages | Later |
+| Marketing | Email campaigns with A/B tests and multi-touch attribution | campaigns, sequences, UTM capture | Later |
+| Platform | SSO (Google / SAML), two-factor sign-in, field-level permissions | Sanctum, roles | Next |
+| Platform | GDPR tools: consent tracking, export / erase a person | audit log | Next |
+| Platform | Zapier / Make connector and OAuth apps for the public API | API keys, webhooks | Later |
+| Platform | Native mobile shell for the PWA with push notifications | PWA, notification preferences | Later |

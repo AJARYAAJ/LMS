@@ -15,6 +15,7 @@ use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 
 /**
@@ -49,10 +50,22 @@ class Entities
             return [
                 'key' => $key,
                 'label' => $def['label'],
-                'dimensions' => collect($def['dimensions'])->map(fn ($d, $k) => ['key' => $k, 'label' => $d['label'], 'type' => $d['type']])->values(),
+                'dimensions' => collect($def['dimensions'])->map(fn ($d, $k) => [
+                    'key' => $k,
+                    'label' => $d['label'],
+                    'type' => $d['type'],
+                    'filterable' => $d['type'] === 'enum' && ($d['filterable'] ?? true),
+                    'values' => $d['type'] === 'enum' ? array_map(fn ($v) => ['value' => $v, 'label' => self::valueLabel($d, $v)], $d['values']) : null,
+                ])->values(),
                 'metrics' => collect($def['metrics'])->map(fn ($m, $k) => ['key' => $k, 'label' => $m['label'], 'format' => $m['format']])->values(),
             ];
         })->all();
+    }
+
+    /** Display label for a fixed-choice value ("meeting_booked" → "Meeting booked"). */
+    public static function valueLabel(array $dimension, string $value): string
+    {
+        return $dimension['labels'][$value] ?? Str::ucfirst(str_replace('_', ' ', $value));
     }
 
     private static function rate(string $part, string $whole): \Closure
@@ -144,7 +157,7 @@ class Entities
                 ->when($user->role === User::SALES_REP, fn ($q) => $q->where('user_id', $user->id)),
             'dimensions' => [
                 'date' => ['label' => 'Date', 'type' => 'date', 'column' => 'activities.occurred_at'],
-                'type' => ['label' => 'Type', 'type' => 'enum', 'column' => 'type', 'values' => ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task']],
+                'type' => ['label' => 'Type', 'type' => 'enum', 'column' => 'type', 'values' => ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task'], 'labels' => ['sms' => 'SMS', 'whatsapp' => 'WhatsApp']],
                 'user' => self::owner('user_id', 'Rep'),
                 'direction' => ['label' => 'Direction', 'type' => 'enum', 'column' => 'direction', 'values' => ['outbound', 'inbound'], 'empty' => 'Not set'],
                 'outcome' => ['label' => 'Outcome', 'type' => 'text', 'column' => 'outcome', 'empty' => 'No outcome'],

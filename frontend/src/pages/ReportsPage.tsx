@@ -1,144 +1,93 @@
-import { useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { BarChart3, Download } from 'lucide-react'
-import { useAppSelector } from '@/app/hooks'
-import { useReportsQuery } from '@/services/api'
-import { Avatar, Button, Card, EmptyState, Input, PageHeader, PageLoader } from '@/components/ui'
-import { ChartTooltip } from '@/components/crm/ChartTooltip'
-import { money, number, percent } from '@/lib/format'
+import { useSearchParams } from 'react-router-dom'
+import { Activity, BarChart3, CheckSquare, Flag, Kanban, MessagesSquare, PhoneCall, Target, Wand2 } from 'lucide-react'
+import { PageHeader, Input, Select, Tabs } from '@/components/ui'
+import { TypeReportView, type RangeQuery } from '@/pages/reports/TypeReportView'
+import { LeadDeepDive } from '@/pages/reports/LeadDeepDive'
+import { GoalsView } from '@/pages/reports/GoalsView'
+import { ReportStudio } from '@/pages/reports/ReportStudio'
 
-const FUNNEL_COLORS = ['#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#10b981']
+type Tab = 'leads' | 'pipeline' | 'activities' | 'tasks' | 'calls' | 'messaging' | 'goals' | 'studio'
+
+const TABS: { value: Tab; label: string; icon: React.ReactNode }[] = [
+  { value: 'leads', label: 'Leads', icon: <Target /> },
+  { value: 'pipeline', label: 'Pipeline', icon: <Kanban /> },
+  { value: 'activities', label: 'Activities', icon: <Activity /> },
+  { value: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
+  { value: 'calls', label: 'AI calls', icon: <PhoneCall /> },
+  { value: 'messaging', label: 'Messaging', icon: <MessagesSquare /> },
+  { value: 'goals', label: 'Goals', icon: <Flag /> },
+  { value: 'studio', label: 'Report studio', icon: <Wand2 /> },
+]
+
+const RANGES: [string, string][] = [
+  ['last_7', 'Last 7 days'], ['last_30', 'Last 30 days'], ['last_90', 'Last 90 days'], ['this_month', 'This month'], ['last_month', 'Last month'],
+  ['this_quarter', 'This quarter'], ['this_year', 'This year'], ['last_12_months', 'Last 12 months'], ['custom', 'Custom…'],
+]
+
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** Concrete dates for a preset (the lead deep-dive takes from/to). */
+function presetDates(preset: string, from: string, to: string): [string, string] {
+  const now = new Date()
+  const back = (days: number) => iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days))
+  switch (preset) {
+    case 'custom': return [from, to]
+    case 'last_7': return [back(6), iso(now)]
+    case 'last_30': return [back(29), iso(now)]
+    case 'this_month': return [iso(new Date(now.getFullYear(), now.getMonth(), 1)), iso(now)]
+    case 'last_month': return [iso(new Date(now.getFullYear(), now.getMonth() - 1, 1)), iso(new Date(now.getFullYear(), now.getMonth(), 0))]
+    case 'this_quarter': return [iso(new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)), iso(now)]
+    case 'this_year': return [iso(new Date(now.getFullYear(), 0, 1)), iso(now)]
+    case 'last_12_months': return [iso(new Date(now.getFullYear(), now.getMonth() - 11, 1)), iso(now)]
+    default: return [back(89), iso(now)]
+  }
+}
 
 export function ReportsPage() {
-  const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
-  const [range, setRange] = useState(() => {
-    const to = new Date()
-    const from = new Date(Date.now() - 89 * 86_400_000)
-    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) }
-  })
-  const { data, isFetching } = useReportsQuery(range)
+  const [params, setParams] = useSearchParams()
+  const tab = (TABS.some((t) => t.value === params.get('tab')) ? params.get('tab') : 'leads') as Tab
+  const preset = params.get('range') ?? 'last_90'
+  const from = params.get('from') ?? iso(new Date(Date.now() - 29 * 86_400_000))
+  const to = params.get('to') ?? iso(new Date())
+  const range: RangeQuery = preset === 'custom' ? { range: 'custom', from, to } : { range: preset }
+  const [deepFrom, deepTo] = presetDates(preset, from, to)
 
-  const exportCsv = () => {
-    if (!data) return
-    const rows = [['Section', 'Name', 'Leads', 'Converted', 'Conversion %', 'Value'],
-      ...data.sources.map((s) => ['Source', s.name, s.leads, s.converted, s.conversion_rate, s.value]),
-      ...data.reps.map((r) => ['Rep', r.name, r.leads, r.converted, r.conversion_rate, r.won_value]),
-      ...data.campaigns.map((c) => ['Campaign', c.name, c.leads, c.converted, c.conversion_rate, c.cost])]
-    const blob = new Blob([rows.map((r) => r.join(',')).join('\n')], { type: 'text/csv' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `lead-report-${range.from}-${range.to}.csv`
-    a.click()
+  const update = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(params)
+    Object.entries(patch).forEach(([k, v]) => (v === null ? next.delete(k) : next.set(k, v)))
+    setParams(next, { replace: true })
   }
 
-  const max = data?.funnel[0]?.count || 1
+  const showRange = tab !== 'goals' && tab !== 'studio'
 
   return (
     <div>
-      <PageHeader icon={<BarChart3 />} title="Insights" description="Funnel, source ROI, team performance and pipeline health."
-        actions={<>
-          <Input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} className="w-auto" />
-          <span className="text-slate-400">→</span>
-          <Input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} className="w-auto" />
-          <Button variant="secondary" size="sm" icon={<Download className="size-4" />} onClick={exportCsv}>CSV</Button>
+      <PageHeader icon={<BarChart3 />} title="Insights" description="Reports and charts for every part of LeadFlow, plus goals and a studio to build your own."
+        actions={showRange && <>
+          <Select value={preset} onChange={(e) => update({ range: e.target.value })} className="w-auto" aria-label="Date range">
+            {RANGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </Select>
+          {preset === 'custom' && <>
+            <Input type="date" value={from} onChange={(e) => update({ from: e.target.value })} className="w-auto" aria-label="From" />
+            <span className="text-slate-400">→</span>
+            <Input type="date" value={to} onChange={(e) => update({ to: e.target.value })} className="w-auto" aria-label="To" />
+          </>}
         </>}
       />
-      {!data ? <PageLoader /> : (
-        <div className={isFetching ? 'opacity-60 transition' : 'transition'}>
-          {/* Funnel river */}
-          <Card title="Conversion funnel" subtitle="How leads flow from capture to won deals" className="mb-6">
-            <div className="space-y-3 py-2">
-              {data.funnel.map((f, i) => {
-                const w = Math.max((f.count / max) * 100, 4)
-                const prev = i > 0 ? data.funnel[i - 1].count : null
-                return (
-                  <div key={f.stage} className="flex items-center gap-4">
-                    <span className="w-24 shrink-0 text-right text-sm font-medium text-slate-600 dark:text-slate-300">{f.stage}</span>
-                    <div className="relative flex-1">
-                      <div className="mx-auto flex h-12 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-[0_10px_30px_-12px_var(--c)] transition-all duration-700"
-                        style={{ width: `${w}%`, background: `linear-gradient(90deg, ${FUNNEL_COLORS[i]}, ${FUNNEL_COLORS[i]}cc)`, ['--c' as string]: FUNNEL_COLORS[i] }}>
-                        <span className="font-display">{number(f.count)}</span>
-                      </div>
-                    </div>
-                    <span className="w-20 shrink-0 text-xs text-slate-500">{prev ? percent((f.count / (prev || 1)) * 100, 0) + ' step' : ''}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </Card>
+      <Tabs className="mb-6" tabs={TABS} value={tab} onChange={(t) => update({ tab: t, report: null })} />
 
-          <div className="mb-6 grid gap-6 lg:grid-cols-2">
-            <Card title="Source performance" padded={false}>
-              <table className="w-full">
-                <thead><tr>{['Source', 'Leads', 'Qualified', 'Converted', 'Conv.', 'Value'].map((h) => <th key={h} className="table-head">{h}</th>)}</tr></thead>
-                <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
-                  {data.sources.map((s) => (
-                    <tr key={s.id}>
-                      <td className="table-cell"><span className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ backgroundColor: s.color }} />{s.name}</span></td>
-                      <td className="table-cell">{s.leads}</td><td className="table-cell">{s.qualified}</td><td className="table-cell">{s.converted}</td>
-                      <td className="table-cell"><span className="font-semibold text-emerald-600">{percent(s.conversion_rate)}</span></td>
-                      <td className="table-cell font-display">{money(s.value, currency, true)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!data.sources.length && <EmptyState title="No data in range" />}
-            </Card>
-            <Card title="Lead aging" subtitle="Open leads by age">
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.aging} margin={{ left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-white/5" />
-                    <XAxis dataKey="bucket" tickLine={false} axisLine={false} fontSize={11} stroke="#94a3b8" />
-                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} stroke="#94a3b8" />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(139,92,246,0.06)' }} />
-                    <Bar dataKey="count" name="Leads" radius={[10, 10, 4, 4]} maxBarSize={56}>
-                      {data.aging.map((_, i) => <Cell key={i} fill={['#10b981', '#8b5cf6', '#f59e0b', '#ef4444'][i]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Card>
-          </div>
-
-          <Card title="Team leaderboard" className="mb-6" padded={false}>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px]">
-                <thead><tr>{['#', 'Rep', 'Leads', 'Converted', 'Conversion', 'Activities', 'Won value'].map((h) => <th key={h} className="table-head">{h}</th>)}</tr></thead>
-                <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
-                  {[...data.reps].sort((a, b) => b.won_value - a.won_value || b.converted - a.converted).map((r, i) => (
-                    <tr key={r.id}>
-                      <td className="table-cell font-display font-bold text-slate-400">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
-                      <td className="table-cell"><span className="flex items-center gap-2"><Avatar name={r.name} color={r.avatar_color} size="sm" />{r.name}</span></td>
-                      <td className="table-cell">{r.leads}</td><td className="table-cell">{r.converted}</td>
-                      <td className="table-cell">
-                        <div className="flex items-center gap-2"><div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-fuchsia-500" style={{ width: `${Math.min(r.conversion_rate, 100)}%` }} /></div><span className="text-xs">{percent(r.conversion_rate)}</span></div>
-                      </td>
-                      <td className="table-cell">{r.activities}</td>
-                      <td className="table-cell font-display font-semibold">{money(r.won_value, currency, true)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <Card title="Campaign ROI" padded={false}>
-            <table className="w-full">
-              <thead><tr>{['Campaign', 'Status', 'Leads', 'Converted', 'Conv.', 'Cost', 'Cost / lead'].map((h) => <th key={h} className="table-head">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-200/60 dark:divide-white/[0.06]">
-                {data.campaigns.map((c) => (
-                  <tr key={c.id}>
-                    <td className="table-cell font-medium">{c.name}</td><td className="table-cell capitalize">{c.status}</td><td className="table-cell">{c.leads}</td><td className="table-cell">{c.converted}</td>
-                    <td className="table-cell">{percent(c.conversion_rate)}</td><td className="table-cell">{money(c.cost, currency)}</td><td className="table-cell font-display">{c.cost_per_lead ? money(c.cost_per_lead, currency) : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!data.campaigns.length && <EmptyState title="No campaigns" />}
-          </Card>
-        </div>
-      )}
+      {tab === 'goals' ? <GoalsView />
+        : tab === 'studio' ? <ReportStudio />
+          : (
+            <TypeReportView key={tab} type={tab} range={range}>
+              {tab === 'leads' && (
+                <div>
+                  <h2 className="mt-4 mb-4 font-display text-lg font-bold text-slate-900 dark:text-white">Funnel, sources & team</h2>
+                  <LeadDeepDive from={deepFrom} to={deepTo} />
+                </div>
+              )}
+            </TypeReportView>
+          )}
     </div>
   )
 }

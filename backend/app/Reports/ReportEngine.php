@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Support\Sql;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -331,7 +330,7 @@ class ReportEngine
                     'label' => $found[$k]->name ?? 'Deleted',
                     'color' => isset($dim['color']) ? ($found[$k]->{$dim['color']} ?? null) : null,
                 ],
-                $dim['type'] === 'enum' => ['label' => Str::ucfirst(str_replace('_', ' ', $k)), 'color' => null],
+                $dim['type'] === 'enum' => ['label' => Entities::valueLabel($dim, (string) $k), 'color' => null],
                 default => ['label' => (string) $k, 'color' => null],
             };
         }

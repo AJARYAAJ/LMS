@@ -218,3 +218,36 @@
     @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300;
   }
 }
+
+/* ---------- data-viz categorical palette ----------
+   Fixed order, validated for colour-vision deficiency on the light card and the
+   dark card surface (never cycled: a 9th series folds into "Other"). Three light
+   steps sit under 3:1 against white, so every chart also offers a table view. */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --series-other: #94a3b8;
+  --chart-grid: #e2e8f0;
+  --chart-axis: #94a3b8;
+  --chart-gap: #ffffff;
+}
+.dark {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --series-other: #64748b;
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-axis: #64748b;
+  --chart-gap: #121230;
+}
