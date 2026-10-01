@@ -36,6 +36,10 @@ class InsightsPlusTest extends TestCase
         $this->as($admin)->postJson('/api/v1/reports/ask', ['question' => 'why are deals lost'])
             ->assertJsonPath('data.result.spec.dimension', 'lost_reason')
             ->assertJsonPath('data.result.spec.filters.status.0', 'lost');
+        $this->as($admin)->postJson('/api/v1/reports/ask', ['question' => 'Lead sources over time'])
+            ->assertJsonPath('data.result.spec.dimension', 'created')
+            ->assertJsonPath('data.result.spec.split', 'source')
+            ->assertJsonPath('data.result.spec.chart', 'stacked');
         $this->as($admin)->postJson('/api/v1/reports/ask', ['question' => 'x'])->assertUnprocessable();
     }
 

@@ -157,6 +157,18 @@ class ReportInterpreter
             }
         }
 
+        // "Lead sources over time": a trend split by the grouping word.
+        $split = null;
+        if ($dimension && $def['dimensions'][$dimension]['type'] === 'date') {
+            foreach (['source', 'status', 'stage', 'outcome', 'type', 'owner', 'priority', 'rating', 'industry'] as $key) {
+                $plural = ['source' => 'sources', 'status' => 'statuses', 'stage' => 'stages', 'outcome' => 'outcomes', 'type' => 'types', 'owner' => 'reps', 'priority' => 'priorities', 'rating' => 'ratings', 'industry' => 'industries'][$key];
+                if (Str::contains($q, [" {$key} ", " {$plural} ", "by {$key}"]) && ($found = $this->resolveDimension($entity, $key, $def['dimensions'])) && $def['dimensions'][$found]['type'] !== 'date') {
+                    $split = $found;
+                    break;
+                }
+            }
+        }
+
         $range = match (true) {
             $has('this quarter', 'quarter') => 'this_quarter',
             $has('last month') => 'last_month',
@@ -185,11 +197,12 @@ class ReportInterpreter
             ! $dimension => 'number',
             $has('pie', 'donut', 'share', 'mix', 'breakdown') && ! $isDate => 'pie',
             $has('table') => 'table',
+            $isDate && $split => 'stacked',
             $isDate => $has('bar') ? 'bar' : 'line',
             default => 'bar',
         };
 
-        $spec = $this->engine->normalize(['entity' => $entity, 'metric' => $metric, 'dimension' => $dimension, 'date_field' => $dateField, 'filters' => $filters, 'range' => $range, 'chart' => $chart]);
+        $spec = $this->engine->normalize(['entity' => $entity, 'metric' => $metric, 'dimension' => $dimension, 'split' => $split, 'date_field' => $dateField, 'filters' => $filters, 'range' => $range, 'chart' => $chart]);
 
         return ['spec' => $spec, 'title' => Str::limit(Str::ucfirst(trim($question, ' ?')), 60, ''), 'interpreter' => 'rules'];
     }
