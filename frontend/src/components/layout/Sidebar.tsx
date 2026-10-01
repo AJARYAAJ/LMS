@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import clsx from 'clsx'
 import {
-  BarChart3, BookOpenCheck, Building2, CheckSquare, ChevronsLeft, History, Kanban, LayoutDashboard, Megaphone, PhoneCall, TrendingUp, Settings, Sparkles, Target, Users, X,
+  BarChart3, BookOpenCheck, Building2, CheckSquare, ChevronsLeft, History, Kanban, LayoutDashboard, Megaphone, PhoneCall, TrendingUp, Inbox as InboxIcon, Settings, Sparkles, Target, Users, X,
 } from 'lucide-react'
 import { useAppDispatch, useAppSelector, usePermissions } from '@/app/hooks'
 import { setMobileNav, toggleSidebar } from '@/features/ui/uiSlice'
-import { useTaskSummaryQuery } from '@/services/api'
+import { useInboxSummaryQuery, useTaskSummaryQuery } from '@/services/api'
 
 interface NavItem {
   to: string
@@ -24,6 +24,7 @@ export function Sidebar() {
   const mobileOpen = useAppSelector((s) => s.ui.mobileNavOpen)
   const { admin, manager } = usePermissions()
   const { data: tasks } = useTaskSummaryQuery({ assignee: 'me' }, { pollingInterval: 120_000 })
+  const { data: inbox } = useInboxSummaryQuery(undefined, { pollingInterval: 60_000 })
   const org = useAppSelector((s) => s.auth.user?.organization)
 
   const sections: { title?: string; items: NavItem[] }[] = [
@@ -32,6 +33,7 @@ export function Sidebar() {
       items: [
         { to: '/', label: 'Pulse', icon: LayoutDashboard },
         { to: '/leads', label: 'Leads', icon: Target },
+        { to: '/inbox', label: 'Inbox', icon: InboxIcon, badge: inbox?.unread_threads },
         { to: '/deals', label: 'Pipeline', icon: Kanban },
         { to: '/forecast', label: 'Forecast', icon: TrendingUp },
         { to: '/calls', label: 'AI calls', icon: PhoneCall },

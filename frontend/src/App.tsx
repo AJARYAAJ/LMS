@@ -30,9 +30,11 @@ const PublicFormPage = lazyPage(() => import('@/pages/PublicFormPage'), 'PublicF
 const NotificationsPage = lazyPage(() => import('@/pages/NotificationsPage'), 'NotificationsPage')
 const ForecastPage = lazyPage(() => import('@/pages/ForecastPage'), 'ForecastPage')
 const PublicQuotePage = lazyPage(() => import('@/pages/PublicQuotePage'), 'PublicQuotePage')
+const InboxPage = lazyPage(() => import('@/pages/InboxPage'), 'InboxPage')
+const PublicBookingPage = lazyPage(() => import('@/pages/PublicBookingPage'), 'PublicBookingPage')
 const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage')
 
-const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, NotFoundPage]
+const PAGES = [NotificationsPage, DashboardPage, LeadsPage, LeadDetailPage, QueuePage, TrashPage, DealsPage, DealDetailPage, ContactDetailPage, ContactsPage, AccountDetailPage, AccountsPage, TasksPage, ReportsPage, CampaignsPage, CallsPage, PlaybooksPage, SettingsPage, AuditLogPage, ProfilePage, PublicFormPage, ForecastPage, PublicQuotePage, InboxPage, PublicBookingPage, NotFoundPage]
 
 /** Load every page chunk once the browser is idle so navigation never waits. */
 function usePrefetchPages() {
@@ -54,6 +56,7 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/f/:slug" element={<PublicFormPage />} />
         <Route path="/q/:token" element={<PublicQuotePage />} />
+        <Route path="/book/:slug" element={<PublicBookingPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="leads" element={<LeadsPage />} />
@@ -63,6 +66,7 @@ export default function App() {
           <Route path="deals" element={<DealsPage />} />
           <Route path="deals/:id" element={<DealDetailPage />} />
           <Route path="forecast" element={<ForecastPage />} />
+          <Route path="inbox" element={<InboxPage />} />
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="contacts/:id" element={<ContactDetailPage />} />
           <Route path="accounts" element={<AccountsPage />} />

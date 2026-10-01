@@ -7,6 +7,7 @@ import { useUpdatePasswordMutation, useUpdateProfileMutation } from '@/services/
 import { Avatar, Badge, Button, Card, ColorPicker, Field, Input, PageHeader } from '@/components/ui'
 import { ROLE_LABELS } from '@/lib/constants'
 import { NotificationPreferences } from '@/components/crm/NotificationPreferences'
+import { BookingPageCard, CalendarFeedCard } from '@/components/crm/SchedulingSettings'
 
 export function ProfilePage() {
   const run = useAction()
@@ -64,6 +65,7 @@ export function ProfilePage() {
         </div>
       </div>
       <div className="mt-6"><NotificationPreferences /></div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]"><BookingPageCard /><CalendarFeedCard /></div>
     </div>
   )
 }

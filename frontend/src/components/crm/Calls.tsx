@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import { Bot, CircleStop, Clock, PhoneCall, PhoneOutgoing, Sparkles } from 'lucide-react'
 import { useAction, useAppDispatch, usePermissions, useToast } from '@/app/hooks'
-import { api, resources, useCallLeadMutation, useCallQuery, useCancelCallMutation, useSettings } from '@/services/api'
-import { Badge, Button, Drawer, EmptyState, Field, Modal, PageLoader, Select } from '@/components/ui'
+import { api, resources, useCallLeadMutation, useCallQuery, useCancelCallMutation, useLogCallNotesMutation, useSettings } from '@/services/api'
+import { Badge, Button, Drawer, EmptyState, Field, Input, Modal, PageLoader, Select, Textarea } from '@/components/ui'
 import { dateTime, humanize } from '@/lib/format'
 import type { Call, CallStatus } from '@/types'
 
@@ -59,7 +59,7 @@ export function CallDrawer({ callId, onClose }: { callId: number | null; onClose
 
   return (
     <Drawer open={!!callId} onClose={onClose} width="max-w-2xl"
-      title={<span className="flex items-center gap-2"><PhoneCall className="size-5 text-brand-500" />AI call {call ? `· ${leadName}` : ''}</span>}
+      title={<span className="flex items-center gap-2"><PhoneCall className="size-5 text-brand-500" />{call?.provider === 'manual' ? 'Call' : 'AI call'} {call ? `· ${leadName}` : ''}</span>}
       footer={live && call ? <Button variant="danger" size="sm" icon={<CircleStop className="size-4" />} loading={cancelState.isLoading} onClick={() => run(cancel(call.id), 'Call canceled')}>Cancel call</Button> : undefined}>
       {isLoading || !call ? <PageLoader /> : (
         <div className="space-y-5">
@@ -185,6 +185,55 @@ export function AiCallButton({ leadId, phone }: { leadId: number; phone: string 
             <p className="text-sm text-slate-500">Dialing <span className="font-medium text-slate-800 dark:text-slate-200">{phone}</span></p>
           </div>
         )}
+      </Modal>
+      <CallDrawer callId={viewing} onClose={() => setViewing(null)} />
+    </>
+  )
+}
+
+/** Analyse a call the rep made themselves: paste notes / a transcript or upload a recording. */
+export function CallNotesButton({ leadId }: { leadId: number }) {
+  const run = useAction()
+  const { write } = usePermissions()
+  const [log, state] = useLogCallNotesMutation()
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<'notes' | 'audio'>('notes')
+  const [notes, setNotes] = useState('')
+  const [audio, setAudio] = useState<File | null>(null)
+  const [minutes, setMinutes] = useState('')
+  const [viewing, setViewing] = useState<number | null>(null)
+  if (!write) return null
+
+  const submit = async () => {
+    const c = await run(log({ leadId, notes: mode === 'notes' ? notes : undefined, audio: mode === 'audio' ? audio ?? undefined : undefined, duration_minutes: minutes ? Number(minutes) : undefined }))
+    if (c) {
+      setOpen(false); setNotes(''); setAudio(null); setMinutes('')
+      setViewing(c.id)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="secondary" icon={<Sparkles className="size-4" />} onClick={() => setOpen(true)}>Analyse call</Button>
+      <Modal open={open} onClose={() => setOpen(false)} size="lg" title="Analyse a call" description="Paste your notes or a transcript, or upload the recording. The outcome, summary, answered qualification questions and follow-up are filled in for you."
+        footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button loading={state.isLoading} disabled={mode === 'notes' ? notes.trim().length < 5 : !audio} onClick={submit} icon={<Sparkles className="size-4" />}>Analyse</Button></>}>
+        <div className="space-y-4">
+          <div className="inline-flex rounded-xl bg-slate-900/[0.05] p-1 dark:bg-white/[0.05]">
+            {(['notes', 'audio'] as const).map((m) => (
+              <button key={m} type="button" onClick={() => setMode(m)} className={clsx('rounded-lg px-3 py-1.5 text-xs font-medium transition', mode === m ? 'bg-white text-slate-900 shadow-sm dark:bg-white/10 dark:text-white' : 'text-slate-500')}>{m === 'notes' ? 'Paste notes' : 'Upload recording'}</button>
+            ))}
+          </div>
+          {mode === 'notes' ? (
+            <Field label="Notes or transcript" hint="Start lines with “Me:” for what you said and the lead’s name for their answers — or just write free-form notes.">
+              <Textarea rows={8} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={'Me: Is improving follow-up a priority this quarter?\nAda: Yes — we lose track of leads. Budget is set aside.\nAda: Tuesday at 2pm works for a demo.'} />
+            </Field>
+          ) : (
+            <Field label="Recording" hint="MP3, WAV, M4A, WEBM or OGG up to 25 MB. Needs a transcription provider (Settings → Integrations → Deepgram).">
+              <Input type="file" accept="audio/*,video/mp4,video/webm" onChange={(e) => setAudio(e.target.files?.[0] ?? null)} />
+            </Field>
+          )}
+          <Field label="Call length (minutes)"><Input type="number" min={1} max={600} value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-32" /></Field>
+        </div>
       </Modal>
       <CallDrawer callId={viewing} onClose={() => setViewing(null)} />
     </>

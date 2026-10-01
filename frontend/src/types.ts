@@ -844,3 +844,44 @@ export interface ConversionPrediction {
   factors: { label: string; effect: number }[]
   trained_on: number
 }
+
+// ------------------------------------------------------------ engagement
+export interface InboxThread {
+  lead: { id: number; first_name: string; last_name: string | null; company: string | null; email: string | null; phone: string | null; owner: UserLite | null }
+  last: { type: 'sms' | 'whatsapp' | 'email'; title: string; description: string | null; direction: 'inbound' | 'outbound' | null; occurred_at: string } | null
+  messages: number
+  unread: number
+  awaiting_reply: boolean
+}
+
+export interface InboxConversation {
+  lead: { id: number; first_name: string; last_name: string | null; company: string | null; email: string | null; phone: string | null; owner_id: number | null; owner: UserLite | null; status: { id: number; name: string; color: string } | null; consent?: Record<string, { status: string; at?: string }> | null }
+  messages: { id: number; type: 'sms' | 'whatsapp' | 'email'; title: string; description: string | null; direction: 'inbound' | 'outbound' | null; occurred_at: string; user: { id: number; name: string } | null }[]
+}
+
+export interface BookingPageSettings {
+  id?: number
+  slug: string
+  title: string
+  description: string | null
+  duration_minutes: number
+  buffer_minutes: number
+  notice_hours: number
+  days_ahead: number
+  weekdays: number[]
+  start_time: string
+  end_time: string
+  timezone: string
+  is_active: boolean
+  url?: string
+}
+
+export interface PublicBookingPage {
+  title: string
+  description: string | null
+  duration_minutes: number
+  timezone: string
+  host: { name: string; job_title: string | null; avatar_color: string | null }
+  organization: string
+  slots: Record<string, string[]>
+}

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui'
 import { Owner, PriorityBadge, RatingBadge } from '@/components/crm/Badges'
 import { Timeline } from '@/components/crm/Timeline'
-import { AiCallButton, CallDrawer } from '@/components/crm/Calls'
+import { AiCallButton, CallDrawer, CallNotesButton } from '@/components/crm/Calls'
 import { TaskFormModal } from '@/components/crm/TaskFormModal'
 import { ActivityModal } from '@/components/crm/ActivityModal'
 import { ago, date, dateTime, friendlyDue, humanize, money } from '@/lib/format'
@@ -138,6 +138,7 @@ export function LeadDetailPage() {
           <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/60 px-6 py-3 dark:border-white/[0.06]">
             <Button size="sm" variant="secondary" icon={<Phone className="size-4" />} onClick={() => { setActivityType('call'); setModal('activity') }}>Log call</Button>
             <AiCallButton leadId={lead.id} phone={lead.phone} />
+            <CallNotesButton leadId={lead.id} />
             <Button size="sm" variant="secondary" icon={<Send className="size-4" />} onClick={() => setModal('email')} disabled={!lead.email}>Email</Button>
             <Button size="sm" variant="secondary" icon={<CalendarClock className="size-4" />} onClick={() => setModal('task')}>Task</Button>
             <Button size="sm" variant="secondary" icon={<MessageCircle className="size-4" />} onClick={() => setModal('message')} disabled={!lead.phone}>SMS / WhatsApp</Button>

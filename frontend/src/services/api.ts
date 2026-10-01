@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -347,7 +347,7 @@ export const api = createApi({
     }),
     sendEmail: b.mutation<{ message: string }, { id: number; subject: string; body: string; email_template_id?: number | null }>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/email`, method: 'POST', body }),
-      invalidatesTags: ['Activity', 'Insights', 'Lead', 'EmailTemplate'],
+      invalidatesTags: ['Activity', 'Insights', 'Lead', 'EmailTemplate', 'Inbox'],
     }),
     previewEmail: b.mutation<{ subject: string; body: string }, { id: number; subject: string; body: string }>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/email/preview`, method: 'POST', body }),
@@ -372,7 +372,7 @@ export const api = createApi({
     }),
     sendMessage: b.mutation<{ message: string }, { id: number; channel: 'sms' | 'whatsapp'; body: string }>({
       query: ({ id, ...body }) => ({ url: `leads/${id}/message`, method: 'POST', body }),
-      invalidatesTags: ['Activity', 'Lead', 'Insights'],
+      invalidatesTags: ['Activity', 'Lead', 'Insights', 'Inbox'],
     }),
     publicForm: b.query<Pick<WebForm, 'name' | 'slug' | 'title' | 'description' | 'submit_label' | 'success_message' | 'redirect_url' | 'accent_color'> & { fields: WebFormField[]; organization: string }, string>({
       query: (slug) => `forms/${slug}`,
@@ -446,6 +446,72 @@ export const api = createApi({
       query: (params) => ({ url: 'deals/board', params: clean(params) }),
       transformResponse: (r: { data: DealColumn[] }) => r.data,
       providesTags: ['Deal'],
+    }),
+    inbox: b.query<{ data: InboxThread[]; unread_threads: number }, { filter?: string; channel?: string; search?: string }>({
+      query: (params) => ({ url: 'inbox', params: clean(params) }),
+      providesTags: [{ type: 'Inbox', id: 'LIST' }],
+    }),
+    inboxSummary: b.query<{ unread_threads: number }, void>({
+      query: () => 'inbox/summary',
+      transformResponse: (r: { data: { unread_threads: number } }) => r.data,
+      providesTags: [{ type: 'Inbox', id: 'LIST' }],
+    }),
+    conversation: b.query<InboxConversation, number>({
+      query: (leadId) => `inbox/${leadId}`,
+      transformResponse: (r: { data: InboxConversation }) => r.data,
+      providesTags: (_r, _e, id) => [{ type: 'Inbox', id }],
+      // Opening a thread marks it read, so refresh the list counts afterwards.
+      async onQueryStarted(_id, { dispatch, queryFulfilled }) {
+        await queryFulfilled.catch(() => undefined)
+        dispatch(api.util.invalidateTags([{ type: 'Inbox', id: 'LIST' }]))
+      },
+    }),
+    bookingPage: b.query<BookingPageSettings | null, void>({
+      query: () => 'booking-page',
+      transformResponse: (r: { data: BookingPageSettings | null }) => r.data,
+      providesTags: ['BookingPage'],
+    }),
+    saveBookingPage: b.mutation<BookingPageSettings, Omit<BookingPageSettings, 'id' | 'url'>>({
+      query: (body) => ({ url: 'booking-page', method: 'PUT', body }),
+      transformResponse: (r: { data: BookingPageSettings }) => r.data,
+      invalidatesTags: ['BookingPage'],
+    }),
+    suggestBookingSlug: b.query<{ slug: string }, void>({
+      query: () => 'booking-page/suggest',
+      transformResponse: (r: { data: { slug: string } }) => r.data,
+    }),
+    publicBooking: b.query<PublicBookingPage, string>({
+      query: (slug) => `public/book/${slug}`,
+      transformResponse: (r: { data: PublicBookingPage }) => r.data,
+      providesTags: ['BookingPage'],
+    }),
+    bookMeeting: b.mutation<{ start: string; local: string; timezone: string; host: string; title: string }, { slug: string; name: string; email: string; phone?: string; company?: string; notes?: string; start: string }>({
+      query: ({ slug, ...body }) => ({ url: `public/book/${slug}`, method: 'POST', body }),
+      transformResponse: (r: { data: never }) => r.data,
+      invalidatesTags: ['BookingPage'],
+    }),
+    calendarFeed: b.query<{ url: string }, void>({
+      query: () => 'auth/calendar-feed',
+      transformResponse: (r: { data: { url: string } }) => r.data,
+      providesTags: ['CalendarFeed'],
+    }),
+    resetCalendarFeed: b.mutation<{ url: string }, void>({
+      query: () => ({ url: 'auth/calendar-feed', method: 'POST' }),
+      transformResponse: (r: { data: { url: string } }) => r.data,
+      invalidatesTags: ['CalendarFeed'],
+    }),
+    logCallNotes: b.mutation<Call, { leadId: number; notes?: string; audio?: File; duration_minutes?: number }>({
+      query: ({ leadId, notes, audio, duration_minutes }) => {
+        if (audio) {
+          const form = new FormData()
+          form.append('audio', audio)
+          if (duration_minutes) form.append('duration_minutes', String(duration_minutes))
+          return { url: `leads/${leadId}/call-notes`, method: 'POST', body: form }
+        }
+        return { url: `leads/${leadId}/call-notes`, method: 'POST', body: { notes, duration_minutes } }
+      },
+      transformResponse: (r: { data: Call }) => r.data,
+      invalidatesTags: ['Call', 'Activity', 'Lead', 'Insights', 'Task', 'Score'],
     }),
     forecast: b.query<Forecast, { period?: string; pipeline_id?: number | string }>({
       query: (params) => ({ url: 'deals/forecast', params: clean(params) }),
@@ -665,6 +731,8 @@ export const {
   useSaveReportMutation, useDeleteReportMutation, useSendReportMutation, useGoalsQuery, useSaveGoalMutation, useDeleteGoalMutation,
   useForecastQuery, useQuotesQuery, useQuoteQuery, useSaveQuoteMutation, useSendQuoteMutation, useDuplicateQuoteMutation, useDeleteQuoteMutation,
   usePublicQuoteQuery, useRespondQuoteMutation,
+  useInboxQuery, useInboxSummaryQuery, useConversationQuery, useBookingPageQuery, useSaveBookingPageMutation, useLazySuggestBookingSlugQuery,
+  usePublicBookingQuery, useBookMeetingMutation, useCalendarFeedQuery, useResetCalendarFeedMutation, useLogCallNotesMutation,
   useAskReportMutation, useDashboardsQuery, useSaveDashboardMutation, useDeleteDashboardMutation,
   useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
