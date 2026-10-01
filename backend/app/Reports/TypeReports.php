@@ -3,6 +3,7 @@
 namespace App\Reports;
 
 use App\Models\User;
+use App\Security\FieldPermissions;
 use InvalidArgumentException;
 
 /**
@@ -29,6 +30,9 @@ class TypeReports
         $previous = $range->previous();
 
         $kpis = array_map(function (array $kpi) use ($user, $range, $previous) {
+            if (! $this->allowed($user, $kpi)) {
+                return null;
+            }
             $spec = ['entity' => $kpi['entity'], 'metric' => $kpi['metric'], 'filters' => $kpi['filters'] ?? [], 'date_field' => $kpi['date_field'] ?? null];
             $now = $this->engine->total($user, $spec, $range);
             $before = $this->engine->total($user, $spec, $previous);
@@ -48,15 +52,26 @@ class TypeReports
                 'spec' => $spec,
             ];
         }, $def['kpis']);
+        $kpis = array_values(array_filter($kpis));
 
-        $widgets = array_map(fn (array $w) => [
+        $widgets = array_map(fn (array $w) => ! $this->allowed($user, $w['spec']) ? null : [
             'title' => $w['title'],
             'subtitle' => $w['subtitle'] ?? null,
             'span' => $w['span'] ?? 1,
             'result' => $this->engine->run($user, [...$w['spec'], 'range' => 'custom'], $range),
         ], $def['widgets']);
+        $widgets = array_values(array_filter($widgets));
 
         return ['type' => $type, 'title' => self::TYPES[$type], 'range' => $range->toArray(), 'kpis' => $kpis, 'widgets' => $widgets];
+    }
+
+    /** Leave out tiles built on fields this person's role can't see. */
+    private function allowed(User $user, array $spec): bool
+    {
+        $metric = Entities::get($spec['entity'])['metrics'][$spec['metric']] ?? [];
+        $entity = ['leads' => 'lead', 'deals' => 'deal'][$spec['entity']] ?? null;
+
+        return ! ($entity && isset($metric['requires']) && in_array($metric['requires'], FieldPermissions::for($user, $entity)['hidden'], true));
     }
 
     private function definition(string $type): array

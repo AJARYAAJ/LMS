@@ -22,6 +22,7 @@ use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\WebForm;
+use App\Security\FieldPermissions;
 use App\Services\AiLeadAdvisor;
 use App\Services\ConditionEvaluator;
 use App\Services\EmailComposer;
@@ -53,6 +54,7 @@ class MetaController extends Controller
             'sequences' => Sequence::where('is_active', true)->orderBy('name')->get(['id', 'name', 'description', 'steps']),
             'qualification_criteria' => request()->user()->organization->qualificationCriteria(),
             'layouts' => PageLayouts::all(request()->user()->organization),
+            'field_access' => ['lead' => FieldPermissions::for(request()->user(), 'lead'), 'deal' => FieldPermissions::for(request()->user(), 'deal')],
             'features' => [
                 'ai' => app(AiLeadAdvisor::class)->enabled(),
                 'messaging_driver' => app(MessagingService::class)->driver(Tenant::id()),

@@ -23,15 +23,18 @@ use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
+use App\Http\Controllers\Api\PrivacyController;
 use App\Http\Controllers\Api\PublicFormController;
 use App\Http\Controllers\Api\PublicQuoteController;
 use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\RestHookController;
 use App\Http\Controllers\Api\SavedReportController;
 use App\Http\Controllers\Api\SavedViewController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\Settings;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TwoFactorController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -39,6 +42,7 @@ Route::prefix('v1')->group(function () {
     Route::middleware('throttle:auth')->group(function () {
         Route::post('auth/register', [AuthController::class, 'register']);
         Route::post('auth/login', [AuthController::class, 'login']);
+        Route::post('auth/two-factor-challenge', [AuthController::class, 'twoFactorChallenge']);
     });
 
     // Hosted web-to-lead forms (public, by slug)
@@ -48,6 +52,7 @@ Route::prefix('v1')->group(function () {
     // Vendor callbacks (secret token in the URL identifies the organization)
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('public/quotes/{token}', [PublicQuoteController::class, 'show'])->where('token', '[A-Za-z0-9]{40}');
+        Route::post('public/unsubscribe/{lead}/{signature}', [PrivacyController::class, 'unsubscribe'])->whereNumber('lead')->where('signature', '[a-f0-9]{32}');
         Route::get('public/book/{slug}', [BookingController::class, 'publicShow'])->where('slug', '[a-z0-9-]+');
         Route::post('public/book/{slug}', [BookingController::class, 'book'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1');
         Route::get('public/calendar/{token}.ics', [CalendarFeedController::class, 'feed'])->where('token', '[A-Za-z0-9]{40}');
@@ -61,6 +66,13 @@ Route::prefix('v1')->group(function () {
 
     // Web forms / external systems (organization API key)
     Route::post('capture/leads', LeadCaptureController::class)->middleware(['api.key', 'throttle:capture']);
+    Route::middleware(['api.key', 'throttle:120,1'])->prefix('hooks')->group(function () {
+        Route::get('me', [RestHookController::class, 'me']);
+        Route::post('subscriptions', [RestHookController::class, 'subscribe']);
+        Route::delete('subscriptions/{id}', [RestHookController::class, 'unsubscribe'])->whereNumber('id');
+        Route::get('samples/{event}', [RestHookController::class, 'samples']);
+        Route::get('leads', [RestHookController::class, 'leads']);
+    });
 
     Route::middleware(['auth:sanctum', 'tenant', 'writable'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
@@ -162,8 +174,16 @@ Route::prefix('v1')->group(function () {
         Route::get('booking-page', [BookingController::class, 'mine']);
         Route::put('booking-page', [BookingController::class, 'save']);
         Route::get('booking-page/suggest', [BookingController::class, 'suggestSlug']);
+        Route::get('auth/two-factor', [TwoFactorController::class, 'show']);
+        Route::post('auth/two-factor', [TwoFactorController::class, 'setup']);
+        Route::post('auth/two-factor/confirm', [TwoFactorController::class, 'confirm'])->middleware('throttle:10,1');
+        Route::post('auth/two-factor/recovery-codes', [TwoFactorController::class, 'regenerate']);
+        Route::delete('auth/two-factor', [TwoFactorController::class, 'destroy']);
         Route::get('auth/calendar-feed', [CalendarFeedController::class, 'token']);
         Route::post('auth/calendar-feed', [CalendarFeedController::class, 'token']);
+        Route::put('leads/{id}/consent', [PrivacyController::class, 'consent'])->whereNumber('id');
+        Route::get('leads/{id}/export', [PrivacyController::class, 'export'])->whereNumber('id');
+        Route::post('leads/{id}/erase', [PrivacyController::class, 'erase'])->whereNumber('id');
         Route::post('leads/{leadId}/call-notes', [CallNotesController::class, 'store'])->whereNumber('leadId')->middleware('throttle:30,1');
         Route::get('deals/{dealId}/quotes', [QuoteController::class, 'index'])->whereNumber('dealId');
         Route::post('deals/{dealId}/quotes', [QuoteController::class, 'store'])->whereNumber('dealId');
@@ -210,6 +230,8 @@ Route::prefix('v1')->group(function () {
             Route::patch('integrations/{id}', [Settings\IntegrationController::class, 'update'])->whereNumber('id');
             Route::delete('integrations/{id}', [Settings\IntegrationController::class, 'destroy'])->whereNumber('id');
             Route::post('integrations/{id}/test', [Settings\IntegrationController::class, 'test'])->whereNumber('id');
+            Route::get('field-permissions', [Settings\FieldPermissionController::class, 'show']);
+            Route::put('field-permissions', [Settings\FieldPermissionController::class, 'update']);
             Route::get('layouts', [Settings\LayoutController::class, 'index']);
             Route::put('layouts/{entity}', [Settings\LayoutController::class, 'update']);
             Route::delete('layouts/{entity}', [Settings\LayoutController::class, 'destroy']);

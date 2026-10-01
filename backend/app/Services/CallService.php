@@ -70,6 +70,9 @@ class CallService
         if (! $lead->phone) {
             throw ValidationException::withMessages(['phone' => "{$lead->full_name} has no phone number."]);
         }
+        if (! $lead->canContact('calls')) {
+            throw ValidationException::withMessages(['lead' => "{$lead->full_name} asked not to be called."]);
+        }
         if (Call::where('lead_id', $lead->id)->whereNotIn('status', Call::FINAL)->exists()) {
             throw ValidationException::withMessages(['lead' => 'A call to this lead is already in progress.']);
         }
@@ -105,7 +108,7 @@ class CallService
 
         foreach ($leads->take($limit) as $lead) {
             $recent = Call::where('lead_id', $lead->id)->where('created_at', '>=', now()->subDay())->exists();
-            if (! $lead->phone || $recent || $lead->converted_at) {
+            if (! $lead->phone || $recent || $lead->converted_at || ! $lead->canContact('calls')) {
                 $skipped++;
 
                 continue;

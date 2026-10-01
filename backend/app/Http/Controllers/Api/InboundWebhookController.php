@@ -56,6 +56,13 @@ class InboundWebhookController extends Controller
             if (! $lead) {
                 return;
             }
+            // Carrier-style keywords: STOP opts out of this channel, START opts back in.
+            $keyword = strtolower(trim($body));
+            if (in_array($keyword, ['stop', 'stopall', 'unsubscribe', 'cancel', 'end', 'quit'], true)) {
+                $lead->setConsent($channel, 'denied', 'reply_keyword');
+            } elseif (in_array($keyword, ['start', 'unstop', 'yes'], true) && $lead->consentStatus($channel) === 'denied') {
+                $lead->setConsent($channel, 'granted', 'reply_keyword');
+            }
             $activities->record($lead, $channel, ($channel === 'whatsapp' ? 'WhatsApp' : 'SMS').' received', [
                 'user_id' => null,
                 'description' => $body,

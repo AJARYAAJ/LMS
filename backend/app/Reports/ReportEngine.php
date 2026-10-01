@@ -4,6 +4,7 @@ namespace App\Reports;
 
 use App\Models\Organization;
 use App\Models\User;
+use App\Security\FieldPermissions;
 use App\Support\Sql;
 use App\Support\Tenant;
 use Illuminate\Support\Carbon;
@@ -34,6 +35,11 @@ class ReportEngine
         $spec = $this->normalize($spec);
         $def = Entities::get($spec['entity']);
         $metric = $def['metrics'][$spec['metric']];
+        // A role that can't see a field can't report on it either.
+        $entity = ['leads' => 'lead', 'deals' => 'deal'][$spec['entity']] ?? null;
+        if ($entity && isset($metric['requires']) && in_array($metric['requires'], FieldPermissions::for($user, $entity)['hidden'], true)) {
+            throw ValidationException::withMessages(['spec.metric' => "Your role can’t see {$metric['label']}."]);
+        }
         $dim = $spec['dimension'] ? $def['dimensions'][$spec['dimension']] : null;
         $split = $spec['split'] ? $def['dimensions'][$spec['split']] : null;
         $range ??= ReportRange::resolve($spec['range'], $spec['from'], $spec['to']);

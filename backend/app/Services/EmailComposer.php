@@ -16,7 +16,7 @@ class EmailComposer
 {
     public const MERGE_FIELDS = [
         '{first_name}', '{last_name}', '{name}', '{company}', '{job_title}', '{email}',
-        '{owner.name}', '{owner.email}', '{sender.name}', '{organization.name}',
+        '{owner.name}', '{owner.email}', '{sender.name}', '{organization.name}', '{unsubscribe_url}',
     ];
 
     public function __construct(private ActivityRecorder $activities, private OrgMailer $mailer) {}
@@ -34,6 +34,7 @@ class EmailComposer
             'owner' => ['name' => $lead->owner?->name, 'email' => $lead->owner?->email],
             'sender' => ['name' => $sender?->name],
             'organization' => ['name' => $lead->organization?->name],
+            'unsubscribe_url' => $lead->id ? $lead->unsubscribeUrl() : '',
         ];
         $flat = Arr::dot($values);
 
@@ -45,9 +46,16 @@ class EmailComposer
         if (! $lead->email) {
             throw ValidationException::withMessages(['email' => 'This lead has no email address.']);
         }
+        if (! $lead->canContact('email')) {
+            throw ValidationException::withMessages(['email' => "{$lead->full_name} has opted out of email."]);
+        }
 
         $subject = $this->render($subject, $lead, $sender);
         $body = $this->render($body, $lead, $sender);
+        // Every email carries a one-click way to opt out.
+        if (! str_contains($body, $lead->unsubscribeUrl())) {
+            $body .= "\n\n—\nDon't want these emails? Unsubscribe: ".$lead->unsubscribeUrl();
+        }
 
         $provider = $this->mailer->send($lead->organization_id, $lead->email, $lead->full_name, $subject, $body, $sender ? [$sender->email, $sender->name] : null);
 

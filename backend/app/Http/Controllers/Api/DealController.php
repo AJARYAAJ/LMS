@@ -8,6 +8,7 @@ use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Models\User;
 use App\Reports\GoalTracker;
+use App\Security\FieldPermissions;
 use App\Services\ActivityRecorder;
 use App\Support\Rules;
 use Illuminate\Database\Eloquent\Builder;
@@ -159,6 +160,7 @@ class DealController extends ResourceController
 
     protected function prepare(array $data, Request $request, ?Model $record = null): array
     {
+        FieldPermissions::guard($request->user(), 'deal', $data, $record);
         if (! $record) {
             $data['owner_id'] ??= $request->user()->id;
             $data['currency'] ??= $request->user()->organization->currency;

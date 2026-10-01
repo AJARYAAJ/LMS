@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
+use App\Security\FieldPermissions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +33,12 @@ class Deal extends Model
                 $deal->forecast_category = self::categoryFor((int) $deal->probability);
             }
         });
+    }
+
+    /** Hidden fields never leave the server for roles that can't see them. */
+    public function toArray(): array
+    {
+        return FieldPermissions::strip('deal', parent::toArray());
     }
 
     public static function categoryFor(int $probability): string

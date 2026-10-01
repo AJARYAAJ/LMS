@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['organization_id', 'name', 'email', 'password', 'role', 'phone', 'job_title', 'avatar_color', 'is_active', 'last_login_at', 'preferences'])]
-#[Hidden(['password', 'remember_token', 'calendar_token'])]
+#[Hidden(['password', 'remember_token', 'calendar_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -38,7 +38,15 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'preferences' => 'array',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_confirmed_at !== null && $this->two_factor_secret !== null;
     }
 
     public function teams(): BelongsToMany

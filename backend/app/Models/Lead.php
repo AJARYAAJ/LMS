@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
+use App\Security\FieldPermissions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -49,6 +50,8 @@ class Lead extends Model
             'last_contacted_at' => 'datetime',
             'first_responded_at' => 'datetime',
             'inbox_read_at' => 'datetime',
+            'consent' => 'array',
+            'erased_at' => 'datetime',
             'conversion_likelihood' => 'integer',
             'sla_alerted_at' => 'datetime',
             'assigned_at' => 'datetime',
@@ -100,6 +103,42 @@ class Lead extends Model
     public function notes(): MorphMany
     {
         return $this->morphMany(Note::class, 'notable');
+    }
+
+    public const CONSENT_CHANNELS = ['email', 'sms', 'whatsapp', 'calls'];
+
+    public function consentStatus(string $channel): string
+    {
+        return $this->consent[$channel]['status'] ?? 'unknown';
+    }
+
+    /** False when the person opted out of this channel or their data was erased. */
+    public function canContact(string $channel): bool
+    {
+        return ! $this->erased_at && $this->consentStatus($channel) !== 'denied';
+    }
+
+    public function setConsent(string $channel, string $status, string $source): void
+    {
+        $consent = $this->consent ?? [];
+        $consent[$channel] = ['status' => $status, 'at' => now()->toIso8601String(), 'source' => $source];
+        $this->forceFill(['consent' => $consent])->saveQuietly();
+    }
+
+    public static function unsubscribeSignature(int $id): string
+    {
+        return substr(hash_hmac('sha256', "unsubscribe:{$id}", (string) config('app.key')), 0, 32);
+    }
+
+    public function unsubscribeUrl(): string
+    {
+        return rtrim((string) config('app.frontend_url'), '/')."/unsubscribe/{$this->id}/".self::unsubscribeSignature($this->id);
+    }
+
+    /** Hidden fields never leave the server for roles that can't see them. */
+    public function toArray(): array
+    {
+        return FieldPermissions::strip('lead', parent::toArray());
     }
 
     public function calls(): HasMany

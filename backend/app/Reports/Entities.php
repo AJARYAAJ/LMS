@@ -116,8 +116,8 @@ class Entities
                 'qualified' => ['label' => 'Qualified leads', 'format' => 'number', 'select' => ['v' => 'sum(case when qualified_at is not null or converted_at is not null then 1 else 0 end)'], 'value' => self::plain()],
                 'conversion_rate' => ['label' => 'Conversion rate', 'format' => 'percent', 'select' => ['p' => 'sum(case when converted_at is not null then 1 else 0 end)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
                 'avg_score' => ['label' => 'Average score', 'format' => 'decimal', 'select' => ['s' => 'coalesce(sum(score), 0)', 'n' => 'count(*)'], 'value' => self::ratio('s', 'n')],
-                'expected_value' => ['label' => 'Expected value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(expected_value), 0)'], 'value' => self::plain()],
-                'budget' => ['label' => 'Stated budget', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(budget), 0)'], 'value' => self::plain()],
+                'expected_value' => ['requires' => 'expected_value', 'label' => 'Expected value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(expected_value), 0)'], 'value' => self::plain()],
+                'budget' => ['requires' => 'budget', 'label' => 'Stated budget', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(budget), 0)'], 'value' => self::plain()],
                 'response_hours' => ['label' => 'Average first response (hours)', 'format' => 'hours', 'select' => ['s' => 'coalesce(sum('.Sql::hoursBetween('leads.created_at', 'leads.first_responded_at').'), 0)', 'n' => 'count(first_responded_at)'], 'value' => self::ratio('s', 'n')],
                 'responded_rate' => ['label' => 'Leads contacted', 'format' => 'percent', 'select' => ['p' => 'count(first_responded_at)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
                 'within_sla_rate' => ['label' => 'Contacted within target', 'format' => 'percent', 'select' => ['p' => 'sum(case when first_responded_at is not null and '.Sql::hoursBetween('leads.created_at', 'leads.first_responded_at').' <= __SLA__ then 1 else 0 end)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
@@ -146,13 +146,13 @@ class Entities
             ],
             'metrics' => [
                 'count' => ['label' => 'Deals', 'format' => 'number', 'select' => ['v' => 'count(*)'], 'value' => self::plain()],
-                'amount' => ['label' => 'Deal value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(amount), 0)'], 'value' => self::plain()],
-                'weighted' => ['label' => 'Weighted value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(amount * probability / 100.0), 0)'], 'value' => self::plain()],
-                'won_amount' => ['label' => 'Won revenue', 'format' => 'money', 'select' => ['v' => "coalesce(sum(case when status = 'won' then amount else 0 end), 0)"], 'value' => self::plain()],
+                'amount' => ['requires' => 'amount', 'label' => 'Deal value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(amount), 0)'], 'value' => self::plain()],
+                'weighted' => ['requires' => 'amount', 'label' => 'Weighted value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(amount * probability / 100.0), 0)'], 'value' => self::plain()],
+                'won_amount' => ['requires' => 'amount', 'label' => 'Won revenue', 'format' => 'money', 'select' => ['v' => "coalesce(sum(case when status = 'won' then amount else 0 end), 0)"], 'value' => self::plain()],
                 'won_count' => ['label' => 'Deals won', 'format' => 'number', 'select' => ['v' => "sum(case when status = 'won' then 1 else 0 end)"], 'value' => self::plain()],
                 'lost_count' => ['label' => 'Deals lost', 'format' => 'number', 'select' => ['v' => "sum(case when status = 'lost' then 1 else 0 end)"], 'value' => self::plain()],
                 'win_rate' => ['label' => 'Win rate', 'format' => 'percent', 'select' => ['w' => "sum(case when status = 'won' then 1 else 0 end)", 'c' => "sum(case when status in ('won', 'lost') then 1 else 0 end)"], 'value' => self::rate('w', 'c')],
-                'avg_amount' => ['label' => 'Average deal size', 'format' => 'money', 'select' => ['s' => 'coalesce(sum(amount), 0)', 'n' => 'count(*)'], 'value' => self::ratio('s', 'n', 0)],
+                'avg_amount' => ['requires' => 'amount', 'label' => 'Average deal size', 'format' => 'money', 'select' => ['s' => 'coalesce(sum(amount), 0)', 'n' => 'count(*)'], 'value' => self::ratio('s', 'n', 0)],
             ],
         ];
     }

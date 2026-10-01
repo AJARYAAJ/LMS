@@ -36,6 +36,9 @@ class MessagingService
         if (! $lead->phone) {
             throw ValidationException::withMessages(['phone' => 'This lead has no phone number.']);
         }
+        if (! $lead->canContact($channel)) {
+            throw ValidationException::withMessages(['channel' => "{$lead->full_name} has opted out of ".($channel === 'whatsapp' ? 'WhatsApp' : 'SMS').'.']);
+        }
 
         $body = $this->composer->render($body, $lead, $sender);
         $to = preg_replace('/[^\d+]/', '', $lead->phone);
