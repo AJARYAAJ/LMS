@@ -9,6 +9,7 @@ use App\Models\Integration;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\Organization;
+use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Models\ScoringRule;
 use App\Models\Sequence;
@@ -106,9 +107,10 @@ class OrganizationProvisioner
             LeadSource::create(['organization_id' => $organization->id, 'name' => $name, 'key' => $key, 'color' => $color]);
         }
 
+        $pipeline = Pipeline::create(['organization_id' => $organization->id, 'name' => 'Sales', 'is_default' => true]);
         foreach (self::DEFAULT_STAGES as $i => [$name, $probability, $color, $won, $lost]) {
             PipelineStage::create([
-                'organization_id' => $organization->id, 'name' => $name, 'probability' => $probability,
+                'organization_id' => $organization->id, 'pipeline_id' => $pipeline->id, 'name' => $name, 'probability' => $probability,
                 'color' => $color, 'display_order' => $i, 'is_won' => $won, 'is_lost' => $lost,
             ]);
         }
