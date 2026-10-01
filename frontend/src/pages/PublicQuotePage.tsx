@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { CheckCircle2, FileSignature, Printer, XCircle } from 'lucide-react'
 import { usePublicQuoteQuery, useRespondQuoteMutation, errorMessage } from '@/services/api'
-import { Button, Checkbox, EmptyState, Field, Input, PageLoader, Textarea } from '@/components/ui'
+import { Button, EmptyState, Field, Input, PageLoader, Textarea } from '@/components/ui'
 import { QuoteDocument } from '@/components/crm/Quotes'
 
 /** Public page a customer opens from the quote email: read, then accept (typed signature) or decline. */
@@ -54,7 +54,10 @@ export function PublicQuotePage() {
               <Field label="Full name"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" /></Field>
               {name.trim().length > 1 && <p className="pb-2 font-[cursive] text-2xl text-slate-900" aria-hidden>{name}</p>}
             </div>
-            <div className="mt-3"><Checkbox checked={agree} onChange={setAgree} label={`I agree to the terms of quote ${result.number} on behalf of my organization.`} /></div>
+            <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-sm text-slate-700">
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 size-4 rounded accent-brand-600" />
+              I agree to the terms of quote {result.number} and confirm I can accept it on behalf of my organization.
+            </label>
             {error && <p className="mt-3 text-sm text-rose-600" role="alert">{error}</p>}
             <div className="mt-5 flex flex-wrap gap-2">
               <Button onClick={() => answer(true)} loading={state.isLoading} disabled={name.trim().length < 2 || !agree} icon={<CheckCircle2 className="size-4" />}>Accept & sign</Button>

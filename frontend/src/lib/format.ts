@@ -70,3 +70,8 @@ export function humanize(value: string | null | undefined): string {
 export function percent(value: number | null | undefined, digits = 1): string {
   return `${(value ?? 0).toFixed(digits)}%`
 }
+
+/** Money to the cent, for documents where every cent matters (quotes). */
+export function moneyExact(value: number | string | null | undefined, currency = 'USD'): string {
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value ?? 0))
+}

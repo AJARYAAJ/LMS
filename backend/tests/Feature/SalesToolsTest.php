@@ -86,6 +86,10 @@ class SalesToolsTest extends TestCase
         $this->assertEquals(50, $repRow['attainment']);
 
         $this->as($rep)->getJson('/api/v1/deals/forecast')->assertJsonPath('data.total.deals', 2)->assertJsonCount(1, 'data.reps');
+
+        // A monthly team goal counts three times over a quarter.
+        $this->as($admin)->postJson('/api/v1/goals', ['metric' => 'revenue_won', 'period' => 'month', 'target' => 1000]);
+        $this->as($admin)->getJson('/api/v1/deals/forecast?period=this_quarter')->assertJsonPath('data.total.quota', 3000);
     }
 
     public function test_quotes_calculate_send_and_get_signed_by_the_customer(): void

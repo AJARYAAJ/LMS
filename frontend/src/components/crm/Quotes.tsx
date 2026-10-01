@@ -5,7 +5,7 @@ import {
   useDeleteQuoteMutation, useDuplicateQuoteMutation, useMetaQuery, useQuotesQuery, useSaveQuoteMutation, useSendQuoteMutation,
 } from '@/services/api'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, Field, Input, Modal, Select, Textarea } from '@/components/ui'
-import { date, money } from '@/lib/format'
+import { date, moneyExact as money } from '@/lib/format'
 import type { Deal, PublicQuote, Quote, QuoteItem } from '@/types'
 
 export const QUOTE_STATUS: Record<Quote['status'], { label: string; color: string }> = {

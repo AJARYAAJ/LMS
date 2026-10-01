@@ -16,7 +16,7 @@ class PublicQuoteController extends Controller
 
     private function find(string $token): Quote
     {
-        $quote = Quote::withoutGlobalScopes()->with('items', 'deal.organization', 'deal.contact', 'deal.owner')->where('public_token', $token)->firstOrFail();
+        $quote = Quote::withoutGlobalScopes()->with('items', 'deal.organization', 'deal.contact', 'deal.account', 'deal.lead', 'deal.owner')->where('public_token', $token)->firstOrFail();
         abort_if($quote->status === 'draft', 404);
 
         return $quote;
@@ -36,7 +36,8 @@ class PublicQuoteController extends Controller
             'items' => $quote->items->map->only(['name', 'description', 'quantity', 'unit_price', 'discount_percent', 'total']),
             'organization' => $deal->organization->only(['name', 'website', 'phone']),
             'prepared_by' => $deal->owner?->only(['name', 'email']),
-            'customer' => $deal->contact ? trim($deal->contact->first_name.' '.$deal->contact->last_name) : null,
+            'customer' => $deal->contact ? trim($deal->contact->first_name.' '.$deal->contact->last_name).($deal->account ? ", {$deal->account->name}" : '')
+                : ($deal->account?->name ?? $deal->lead?->company ?? $deal->lead?->full_name),
         ]]);
     }
 

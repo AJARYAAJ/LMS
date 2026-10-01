@@ -91,8 +91,17 @@ class DealController extends ResourceController
             ->get();
 
         $sum = fn ($set, string $cat) => (float) $set->where('forecast_category', $cat)->sum(fn (Deal $d) => (float) $d->amount);
-        $quota = fn (?int $userId) => (float) Goal::where('metric', 'revenue_won')->where('period', $kind)
-            ->when($userId, fn ($q) => $q->where('user_id', $userId), fn ($q) => $q->whereNull('user_id'))->sum('target');
+        // Quota from revenue goals; monthly and quarterly goals convert into the period shown.
+        $quota = function (?int $userId) use ($kind) {
+            $goals = Goal::where('metric', 'revenue_won')
+                ->when($userId, fn ($q) => $q->where('user_id', $userId), fn ($q) => $q->whereNull('user_id'))->get(['period', 'target']);
+
+            return (float) $goals->sum(fn (Goal $g) => match (true) {
+                $g->period === $kind => $g->target,
+                $kind === 'quarter' => $g->target * 3,
+                default => $g->target / 3,
+            });
+        };
         $row = function ($set, ?int $userId) use ($sum, $quota) {
             $closed = $sum($set, 'closed');
             $commit = $sum($set, 'commit');
