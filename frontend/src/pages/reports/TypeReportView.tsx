@@ -7,7 +7,7 @@ import type { ReportKpi } from '@/types'
 
 export interface RangeQuery { range: string; from?: string; to?: string }
 
-function Kpi({ kpi }: { kpi: ReportKpi }) {
+export function Kpi({ kpi }: { kpi: ReportKpi }) {
   const currency = useAppSelector((s) => s.auth.user?.organization?.currency ?? 'USD')
   const good = kpi.delta === null || kpi.delta === 0 ? null : (kpi.delta > 0) === (kpi.better === 'up')
   const Icon = kpi.delta === null || kpi.delta === 0 ? Minus : kpi.delta > 0 ? ArrowUpRight : ArrowDownRight

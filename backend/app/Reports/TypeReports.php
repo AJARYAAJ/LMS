@@ -71,6 +71,11 @@ class TypeReports
                     ['label' => 'Conversion rate', 'entity' => 'leads', 'metric' => 'conversion_rate'],
                     ['label' => 'Average score', 'entity' => 'leads', 'metric' => 'avg_score'],
                     ['label' => 'Expected value', 'entity' => 'leads', 'metric' => 'expected_value'],
+                    ['label' => 'Average first response', 'entity' => 'leads', 'metric' => 'response_hours', 'better' => 'down'],
+                    ['label' => 'Contacted within target', 'entity' => 'leads', 'metric' => 'within_sla_rate'],
+                    ['label' => 'Leads contacted', 'entity' => 'leads', 'metric' => 'responded_rate'],
+                    ['label' => 'Days to convert', 'entity' => 'leads', 'metric' => 'days_to_convert', 'better' => 'down'],
+                    ['label' => 'Converted', 'entity' => 'leads', 'metric' => 'converted', 'date_field' => 'converted'],
                 ],
                 'widgets' => [
                     ['title' => 'New leads by source', 'subtitle' => 'Where each day’s leads came from', 'span' => 2, 'spec' => ['entity' => 'leads', 'metric' => 'count', 'dimension' => 'created', 'split' => 'source', 'chart' => 'stacked']],
@@ -80,6 +85,9 @@ class TypeReports
                     ['title' => 'Leads by owner', 'spec' => ['entity' => 'leads', 'metric' => 'count', 'dimension' => 'owner', 'chart' => 'bar']],
                     ['title' => 'Top industries', 'spec' => ['entity' => 'leads', 'metric' => 'count', 'dimension' => 'industry', 'chart' => 'bar', 'limit' => 8]],
                     ['title' => 'Conversions over time', 'spec' => ['entity' => 'leads', 'metric' => 'count', 'dimension' => 'converted', 'chart' => 'area']],
+                    ['title' => 'Speed to lead by owner', 'subtitle' => 'Average hours from capture to first call, email or message', 'spec' => ['entity' => 'leads', 'metric' => 'response_hours', 'dimension' => 'owner', 'chart' => 'bar']],
+                    ['title' => 'Contacted within target, by source', 'spec' => ['entity' => 'leads', 'metric' => 'within_sla_rate', 'dimension' => 'source', 'chart' => 'bar']],
+                    ['title' => 'Days to convert by source', 'spec' => ['entity' => 'leads', 'metric' => 'days_to_convert', 'dimension' => 'source', 'date_field' => 'converted', 'chart' => 'bar']],
                 ],
             ],
             'pipeline' => [

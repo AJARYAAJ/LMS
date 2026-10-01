@@ -82,6 +82,7 @@ class SavedReportController extends Controller
             'schedule' => ['sometimes', Rule::in(SavedReport::SCHEDULES)],
             'recipients' => ['nullable', 'array', 'max:10'],
             'recipients.*' => ['email'],
+            'post_to_chat' => ['sometimes', 'boolean'],
         ]);
         if (isset($data['spec'])) {
             $data['spec'] = $this->engine->normalize($data['spec']); // rejects unknown fields before saving

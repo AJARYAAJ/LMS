@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
-#[Fillable(['user_id', 'name', 'description', 'spec', 'is_shared', 'pinned', 'schedule', 'recipients', 'last_sent_at'])]
+#[Fillable(['user_id', 'name', 'description', 'spec', 'is_shared', 'pinned', 'schedule', 'recipients', 'post_to_chat', 'last_sent_at'])]
 class SavedReport extends Model
 {
     use BelongsToOrganization;
@@ -24,6 +24,7 @@ class SavedReport extends Model
             'recipients' => 'array',
             'is_shared' => 'boolean',
             'pinned' => 'boolean',
+            'post_to_chat' => 'boolean',
             'last_sent_at' => 'datetime',
         ];
     }

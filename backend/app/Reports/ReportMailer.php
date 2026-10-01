@@ -4,6 +4,7 @@ namespace App\Reports;
 
 use App\Models\SavedReport;
 use App\Models\User;
+use App\Services\ChatAlerts;
 use App\Services\OrgMailer;
 
 /**
@@ -12,7 +13,7 @@ use App\Services\OrgMailer;
  */
 class ReportMailer
 {
-    public function __construct(private ReportEngine $engine, private OrgMailer $mailer) {}
+    public function __construct(private ReportEngine $engine, private OrgMailer $mailer, private ChatAlerts $chat) {}
 
     /** @return int number of recipients */
     public function send(SavedReport $report, ?User $runAs = null): int
@@ -43,6 +44,9 @@ class ReportMailer
         foreach ($recipients as $email) {
             $this->mailer->send($report->organization_id, $email, null, "Report: {$report->name}", implode("\n", $lines));
         }
+        if ($report->post_to_chat) {
+            $this->chat->post($report->organization_id, 'report', "Report: {$report->name}", implode("\n", array_slice($lines, 1, -2)), "/reports?tab=studio&report={$report->id}", force: true);
+        }
 
         return count($recipients);
     }
@@ -54,6 +58,7 @@ class ReportMailer
             'percent' => number_format($value, 1).'%',
             'duration' => sprintf('%d:%02d', intdiv((int) $value, 60), (int) $value % 60),
             'decimal' => number_format($value, 1),
+            'hours' => number_format($value, 1).' h',
             default => number_format($value),
         };
     }

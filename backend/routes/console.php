@@ -1,10 +1,12 @@
 <?php
 
 use App\Models\Lead;
+use App\Models\Organization;
 use App\Models\SavedReport;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Reports\ReportEngine;
 use App\Reports\ReportMailer;
 use App\Services\OrgMailer;
 use App\Support\Tenant;
@@ -123,3 +125,40 @@ Artisan::command('reports:send-scheduled', function (ReportMailer $mailer) {
 })->purpose('Email saved reports that are due');
 
 Schedule::command('reports:send-scheduled')->dailyAt('06:43')->withoutOverlapping();
+
+/*
+ * Speed-to-lead target: alert the owner (and their managers) once when a new
+ * lead has waited longer than the organization's response target.
+ */
+Artisan::command('leads:sla', function () {
+    $alerted = 0;
+    Organization::query()->each(function (Organization $organization) use (&$alerted) {
+        Tenant::run($organization->id, function () use ($organization, &$alerted) {
+            $hours = ReportEngine::responseTargetHours();
+            if (($organization->settings['response_sla_enabled'] ?? true) === false) {
+                return;
+            }
+            Lead::whereNull('first_responded_at')->whereNull('sla_alerted_at')->whereNull('converted_at')
+                ->where('created_at', '<=', now()->subMinutes((int) round($hours * 60)))
+                ->where('created_at', '>=', now()->subDays(3)) // don't page people about old backlog
+                ->with('owner')->limit(200)->get()
+                ->each(function (Lead $lead) use ($hours, &$alerted) {
+                    $waited = (int) round($lead->created_at->diffInMinutes(now()) / 60);
+                    $who = $lead->owner ? collect([$lead->owner]) : collect();
+                    $managers = User::whereIn('role', [User::ADMIN, User::MANAGER])->where('is_active', true)->get();
+                    $who->merge($managers)->unique('id')->each(fn (User $u) => $u->notify(new AppNotification(
+                        "{$lead->full_name} is waiting for a first response",
+                        "Captured {$waited}h ago — the target is ".rtrim(rtrim(number_format($hours, 1), '0'), '.').'h.'.($lead->owner ? " Owner: {$lead->owner->name}." : ' Nobody owns it yet.'),
+                        "/leads/{$lead->id}",
+                        'sla',
+                    )));
+                    $lead->forceFill(['sla_alerted_at' => now()])->saveQuietly();
+                    $alerted++;
+                });
+        });
+    });
+
+    $this->info("Raised {$alerted} speed-to-lead alerts.");
+})->purpose('Alert owners about new leads waiting past the response target');
+
+Schedule::command('leads:sla')->everyTenMinutes()->withoutOverlapping();

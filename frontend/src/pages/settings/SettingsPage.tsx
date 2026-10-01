@@ -88,7 +88,7 @@ function OrganizationSection() {
   const { data: org } = useOrganizationQuery()
   const [update, { isLoading }] = useUpdateOrganizationMutation()
   const [form, setForm] = useState<Record<string, string>>({})
-  useEffect(() => { if (org) setForm({ name: org.name, industry: org.industry ?? '', website: org.website ?? '', phone: org.phone ?? '', timezone: org.timezone, currency: org.currency }) }, [org])
+  useEffect(() => { if (org) setForm({ name: org.name, industry: org.industry ?? '', website: org.website ?? '', phone: org.phone ?? '', timezone: org.timezone, currency: org.currency, sla: String(org.settings?.response_sla_hours ?? 1) }) }, [org])
   if (!org) return <PageLoader />
   const set = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -102,8 +102,14 @@ function OrganizationSection() {
         <Field label="Phone"><Input value={form.phone ?? ''} onChange={set('phone')} /></Field>
         <Field label="Currency"><Select value={form.currency ?? 'USD'} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD', 'SGD', 'AED', 'JPY'].map((c) => <option key={c}>{c}</option>)}</Select></Field>
         <Field label="Time zone"><Select value={form.timezone ?? 'UTC'} onChange={set('timezone')}>{Intl.supportedValuesOf?.('timeZone').map((t) => <option key={t}>{t}</option>) ?? <option>UTC</option>}</Select></Field>
+        <Field label="Speed-to-lead target (hours)" hint="New leads not contacted within this time alert their owner and managers, and show in the Leads report.">
+          <Input type="number" min={0.1} step={0.25} value={form.sla ?? '1'} onChange={set('sla')} />
+        </Field>
       </div>
-      <div className="mt-6 flex justify-end"><Button loading={isLoading} onClick={() => run(update({ ...form, website: form.website || null }), 'Organization updated')}>Save changes</Button></div>
+      <div className="mt-6 flex justify-end"><Button loading={isLoading} onClick={() => {
+        const { sla, ...rest } = form
+        run(update({ ...rest, website: rest.website || null, settings: { response_sla_hours: Math.max(0.1, Number(sla) || 1) } }), 'Organization updated')
+      }}>Save changes</Button></div>
     </Card>
   )
 }

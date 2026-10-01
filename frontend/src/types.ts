@@ -12,6 +12,7 @@ export interface Organization {
   phone: string | null
   timezone: string
   currency: string
+  settings?: Record<string, unknown> | null
 }
 
 export interface UserLite {
@@ -611,7 +612,7 @@ export interface NotificationPrefs {
 // ------------------------------------------------------------ reports & goals
 export type ReportEntity = 'leads' | 'deals' | 'activities' | 'tasks' | 'calls'
 export type ReportChartType = 'bar' | 'stacked' | 'line' | 'area' | 'pie' | 'table' | 'number'
-export type ReportFormat = 'number' | 'money' | 'percent' | 'decimal' | 'duration'
+export type ReportFormat = 'number' | 'money' | 'percent' | 'decimal' | 'duration' | 'hours'
 
 export interface ReportSpec {
   entity: ReportEntity
@@ -694,6 +695,7 @@ export interface SavedReport {
   pinned: boolean
   schedule: 'none' | 'weekly' | 'monthly'
   recipients: string[] | null
+  post_to_chat: boolean
   last_sent_at: string | null
   created_at: string
 }
@@ -713,4 +715,30 @@ export interface Goal {
   expected_percent: number
   status: 'achieved' | 'on_track' | 'behind'
   days_left: number
+}
+
+export interface DashboardTile {
+  id: string
+  kind: 'report' | 'spec' | 'kpis' | 'goals'
+  span: 1 | 2
+  title?: string | null
+  report_id?: number
+  spec?: ReportSpec
+  type?: string
+}
+
+export interface CustomDashboard {
+  id: number
+  user_id: number
+  user?: { id: number; name: string } | null
+  name: string
+  is_shared: boolean
+  tiles: DashboardTile[]
+}
+
+export interface AskAnswer {
+  question: string
+  title: string
+  interpreter: 'claude' | 'rules'
+  result: ReportResult
 }

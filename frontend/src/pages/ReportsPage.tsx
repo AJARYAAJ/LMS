@@ -1,12 +1,14 @@
 import { useSearchParams } from 'react-router-dom'
-import { Activity, BarChart3, CheckSquare, Flag, Kanban, MessagesSquare, PhoneCall, Target, Wand2 } from 'lucide-react'
+import { Activity, BarChart3, CheckSquare, Flag, Kanban, LayoutDashboard, MessagesSquare, PhoneCall, Target, Wand2 } from 'lucide-react'
 import { PageHeader, Input, Select, Tabs } from '@/components/ui'
 import { TypeReportView, type RangeQuery } from '@/pages/reports/TypeReportView'
 import { LeadDeepDive } from '@/pages/reports/LeadDeepDive'
 import { GoalsView } from '@/pages/reports/GoalsView'
 import { ReportStudio } from '@/pages/reports/ReportStudio'
+import { DashboardsView } from '@/pages/reports/DashboardsView'
+import { AskBar } from '@/components/reports/AskBar'
 
-type Tab = 'leads' | 'pipeline' | 'activities' | 'tasks' | 'calls' | 'messaging' | 'goals' | 'studio'
+type Tab = 'leads' | 'pipeline' | 'activities' | 'tasks' | 'calls' | 'messaging' | 'dashboards' | 'goals' | 'studio'
 
 const TABS: { value: Tab; label: string; icon: React.ReactNode }[] = [
   { value: 'leads', label: 'Leads', icon: <Target /> },
@@ -15,6 +17,7 @@ const TABS: { value: Tab; label: string; icon: React.ReactNode }[] = [
   { value: 'tasks', label: 'Tasks', icon: <CheckSquare /> },
   { value: 'calls', label: 'AI calls', icon: <PhoneCall /> },
   { value: 'messaging', label: 'Messaging', icon: <MessagesSquare /> },
+  { value: 'dashboards', label: 'Dashboards', icon: <LayoutDashboard /> },
   { value: 'goals', label: 'Goals', icon: <Flag /> },
   { value: 'studio', label: 'Report studio', icon: <Wand2 /> },
 ]
@@ -58,7 +61,7 @@ export function ReportsPage() {
     setParams(next, { replace: true })
   }
 
-  const showRange = tab !== 'goals' && tab !== 'studio'
+  const showRange = !['goals', 'studio', 'dashboards'].includes(tab)
 
   return (
     <div>
@@ -74,9 +77,11 @@ export function ReportsPage() {
           </>}
         </>}
       />
-      <Tabs className="mb-6" tabs={TABS} value={tab} onChange={(t) => update({ tab: t, report: null })} />
+      <AskBar />
+      <Tabs className="mb-6" tabs={TABS} value={tab} onChange={(t) => update({ tab: t, report: null, dashboard: null })} />
 
-      {tab === 'goals' ? <GoalsView />
+      {tab === 'dashboards' ? <DashboardsView />
+        : tab === 'goals' ? <GoalsView />
         : tab === 'studio' ? <ReportStudio />
           : (
             <TypeReportView key={tab} type={tab} range={range}>

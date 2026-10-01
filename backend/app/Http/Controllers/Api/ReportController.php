@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Reports\Entities;
 use App\Reports\GoalTracker;
 use App\Reports\ReportEngine;
+use App\Reports\ReportInterpreter;
 use App\Reports\ReportRange;
 use App\Reports\TypeReports;
 use Illuminate\Database\Eloquent\Builder;
@@ -38,6 +39,20 @@ class ReportController extends Controller
         $data = $request->validate(['spec' => ['required', 'array']]);
 
         return response()->json(['data' => $engine->run($request->user(), $data['spec'])]);
+    }
+
+    /** Answer a plain-English question with a report ("won revenue by rep this quarter"). */
+    public function ask(Request $request, ReportInterpreter $interpreter, ReportEngine $engine): JsonResponse
+    {
+        $data = $request->validate(['question' => ['required', 'string', 'min:3', 'max:300']]);
+        $answer = $interpreter->interpret($request->user()->organization_id, $data['question']);
+
+        return response()->json(['data' => [
+            'question' => $data['question'],
+            'title' => $answer['title'],
+            'interpreter' => $answer['interpreter'],
+            'result' => $engine->run($request->user(), $answer['spec']),
+        ]]);
     }
 
     /** A ready-made report page for one area (leads, pipeline, activities, tasks, AI calls, messaging). */

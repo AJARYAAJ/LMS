@@ -18,6 +18,16 @@ class Sql
         };
     }
 
+    /** Expression for the hours between two timestamp columns (null when either is null). */
+    public static function hoursBetween(string $from, string $to): string
+    {
+        return match (DB::connection()->getDriverName()) {
+            'pgsql' => "extract(epoch from ({$to} - {$from})) / 3600.0",
+            'mysql', 'mariadb' => "timestampdiff(second, {$from}, {$to}) / 3600.0",
+            default => "(julianday({$to}) - julianday({$from})) * 24.0",
+        };
+    }
+
     /** Expression for the age of a timestamp column in (fractional) days. */
     public static function ageInDays(string $column): string
     {

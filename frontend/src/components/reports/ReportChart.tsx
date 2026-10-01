@@ -20,12 +20,16 @@ export function seriesColor(index: number, key?: string, own?: string | null): s
   return `var(--series-${(index % SLOTS) + 1})`
 }
 
+/** Counts and money add up across groups; rates and averages don't. */
+export const additive = (format: ReportFormat) => format === 'number' || format === 'money'
+
 export function formatValue(value: number, format: ReportFormat, currency = 'USD', compact = false): string {
   switch (format) {
     case 'money': return money(value, currency, compact)
     case 'percent': return percent(value)
     case 'duration': return `${Math.floor(value / 60)}:${String(Math.round(value % 60)).padStart(2, '0')}`
     case 'decimal': return value.toFixed(1)
+    case 'hours': return `${value.toFixed(1)} h`
     default: return number(value, compact)
   }
 }
@@ -77,7 +81,7 @@ export function ReportTable({ result }: { result: ReportResult }) {
         </tbody>
         <tfoot>
           <tr className="border-t border-slate-200 dark:border-white/10">
-            <td className="table-cell font-semibold" colSpan={head.length - 1}>Total</td>
+            <td className="table-cell font-semibold" colSpan={head.length - 1}>{additive(result.format) ? 'Total' : 'Overall'}</td>
             <td className="table-cell text-right font-semibold tabular-nums">{formatValue(result.total, result.format, currency)}</td>
           </tr>
         </tfoot>
@@ -241,7 +245,7 @@ export function ReportCard({ title, subtitle, result, actions, height, className
           <h3 className="truncate font-semibold text-slate-900 dark:text-white">{title}</h3>
           <p className="text-xs text-slate-500">
             {subtitle ?? (result && `${result.metric_label}${result.dimension_label ? ` by ${result.dimension_label.toLowerCase()}` : ''}`)}
-            {result && result.dimension_label && <> · <span className="font-semibold text-slate-700 dark:text-slate-200">{formatValue(result.total, result.format, currency)}</span> total</>}
+            {result && result.dimension_label && <> · <span className="font-semibold text-slate-700 dark:text-slate-200">{formatValue(result.total, result.format, currency)}</span> {additive(result.format) ? 'total' : 'overall'}</>}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">

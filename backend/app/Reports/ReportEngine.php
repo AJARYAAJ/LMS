@@ -2,8 +2,10 @@
 
 namespace App\Reports;
 
+use App\Models\Organization;
 use App\Models\User;
 use App\Support\Sql;
+use App\Support\Tenant;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -128,6 +130,14 @@ class ReportEngine
         return $this->run($user, [...$spec, 'dimension' => null, 'split' => null], $range)['total'];
     }
 
+    /** The organization's speed-to-lead target in hours (Settings → Organization). */
+    public static function responseTargetHours(): float
+    {
+        $hours = Tenant::check() ? (Organization::find(Tenant::id())?->settings['response_sla_hours'] ?? null) : null;
+
+        return max(0.05, (float) ($hours ?: 1));
+    }
+
     public function normalize(array $spec): array
     {
         $entity = $spec['entity'] ?? null;
@@ -229,6 +239,7 @@ class ReportEngine
             $group[] = $split['column'];
         }
         foreach ($metric['select'] as $alias => $sql) {
+            $sql = str_replace('__SLA__', (string) self::responseTargetHours(), $sql);
             $select[] = "{$sql} as m_{$alias}";
         }
 

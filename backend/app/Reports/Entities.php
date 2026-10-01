@@ -14,6 +14,7 @@ use App\Models\PipelineStage;
 use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Sql;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -116,6 +117,10 @@ class Entities
                 'avg_score' => ['label' => 'Average score', 'format' => 'decimal', 'select' => ['s' => 'coalesce(sum(score), 0)', 'n' => 'count(*)'], 'value' => self::ratio('s', 'n')],
                 'expected_value' => ['label' => 'Expected value', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(expected_value), 0)'], 'value' => self::plain()],
                 'budget' => ['label' => 'Stated budget', 'format' => 'money', 'select' => ['v' => 'coalesce(sum(budget), 0)'], 'value' => self::plain()],
+                'response_hours' => ['label' => 'Average first response (hours)', 'format' => 'hours', 'select' => ['s' => 'coalesce(sum('.Sql::hoursBetween('leads.created_at', 'leads.first_responded_at').'), 0)', 'n' => 'count(first_responded_at)'], 'value' => self::ratio('s', 'n')],
+                'responded_rate' => ['label' => 'Leads contacted', 'format' => 'percent', 'select' => ['p' => 'count(first_responded_at)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
+                'within_sla_rate' => ['label' => 'Contacted within target', 'format' => 'percent', 'select' => ['p' => 'sum(case when first_responded_at is not null and '.Sql::hoursBetween('leads.created_at', 'leads.first_responded_at').' <= __SLA__ then 1 else 0 end)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
+                'days_to_convert' => ['label' => 'Average days to convert', 'format' => 'decimal', 'select' => ['s' => 'coalesce(sum('.Sql::hoursBetween('leads.created_at', 'leads.converted_at').' / 24.0), 0)', 'n' => 'count(converted_at)'], 'value' => self::ratio('s', 'n')],
             ],
         ];
     }

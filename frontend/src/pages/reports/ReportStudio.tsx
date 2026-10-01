@@ -10,6 +10,7 @@ import {
 } from '@/services/api'
 import { Badge, Button, ConfirmDialog, EmptyState, Field, Input, Modal, PageLoader, Select, Textarea, Toggle } from '@/components/ui'
 import { ReportCard } from '@/components/reports/ReportChart'
+import { STUDIO_HANDOFF_KEY } from '@/components/reports/AskBar'
 import { ago } from '@/lib/format'
 import type { ReportChartType, ReportEntity, ReportSpec, SavedReport } from '@/types'
 
@@ -53,6 +54,14 @@ export function ReportStudio() {
 
   // Open a saved report from the URL (?report=ID), e.g. from an emailed link or the dashboard.
   const openId = Number(params.get('report')) || null
+  // A question from the Ask bar can be refined here.
+  useEffect(() => {
+    try {
+      const handed = sessionStorage.getItem(STUDIO_HANDOFF_KEY)
+      if (handed) { sessionStorage.removeItem(STUDIO_HANDOFF_KEY); setSpec({ ...DEFAULT_SPEC, ...JSON.parse(handed) }) }
+    } catch { /* ignore */ }
+  }, [])
+
   // The URL is the source of truth for which saved report is open.
   useEffect(() => {
     if (!openId) {
@@ -203,8 +212,8 @@ export function ReportStudio() {
           <div className="flex gap-2 pt-1">
             {current && mine(current)
               ? <Button className="flex-1" icon={<Save className="size-4" />} loading={saveState.isLoading} onClick={async () => { await run(saveReport({ id: current.id, spec }), 'Report updated') }}>Save changes</Button>
-              : <Button className="flex-1" icon={<Save className="size-4" />} onClick={() => setSaving({ name: current ? `${current.name} (copy)` : '', is_shared: false, pinned: false, schedule: 'none', recipients: [] })}>Save report</Button>}
-            {current && mine(current) && <Button variant="secondary" icon={<Copy className="size-4" />} onClick={() => setSaving({ name: `${current.name} (copy)`, is_shared: false, pinned: false, schedule: 'none', recipients: [] })} aria-label="Save as copy" />}
+              : <Button className="flex-1" icon={<Save className="size-4" />} onClick={() => setSaving({ name: current ? `${current.name} (copy)` : '', is_shared: false, pinned: false, schedule: 'none', recipients: [], post_to_chat: false })}>Save report</Button>}
+            {current && mine(current) && <Button variant="secondary" icon={<Copy className="size-4" />} onClick={() => setSaving({ name: `${current.name} (copy)`, is_shared: false, pinned: false, schedule: 'none', recipients: [], post_to_chat: false })} aria-label="Save as copy" />}
             {current && mine(current) && <Button variant="secondary" icon={<Share2 className="size-4" />} onClick={() => setSaving(current)} aria-label="Sharing and schedule" />}
           </div>
         </div>
@@ -298,6 +307,7 @@ function SaveModal({ value, onChange, onClose, onSubmit, loading }: {
         <Field label="Note" hint="Shown under the chart and in emails."><Textarea rows={2} value={value.description ?? ''} onChange={(e) => set({ description: e.target.value })} /></Field>
         <Toggle checked={!!value.pinned} onChange={(v) => set({ pinned: v })} label="Pin to my dashboard" />
         <Toggle checked={!!value.is_shared} onChange={(v) => set({ is_shared: v })} label="Share with my organization" description="Everyone can open it and see the numbers their own access allows." />
+        <Toggle checked={!!value.post_to_chat} onChange={(v) => set({ post_to_chat: v })} label="Also post to Slack / Teams" description="Uses the chat channels connected under Settings → Integrations." />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Email it">
             <Select value={value.schedule ?? 'none'} onChange={(e) => set({ schedule: e.target.value as SavedReport['schedule'] })}>

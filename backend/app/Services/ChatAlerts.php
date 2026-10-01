@@ -15,11 +15,12 @@ class ChatAlerts
 {
     public const DEFAULT_KINDS = ['ai_call', 'inbound_message'];
 
-    public function post(int $organizationId, string $kind, string $title, string $body = '', ?string $url = null): int
+    /** $force skips the kind routing (used when a person chose chat delivery, e.g. a saved report). */
+    public function post(int $organizationId, string $kind, string $title, string $body = '', ?string $url = null, bool $force = false): int
     {
         $organization = Organization::find($organizationId);
         $kinds = $organization?->settings['chat_alert_kinds'] ?? self::DEFAULT_KINDS;
-        if ($kind !== 'test' && ! in_array($kind, $kinds, true)) {
+        if (! $force && $kind !== 'test' && ! in_array($kind, $kinds, true)) {
             return 0;
         }
 

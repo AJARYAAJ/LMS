@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\AiAgent;
 use App\Models\AssignmentRule;
 use App\Models\Campaign;
+use App\Models\Dashboard;
 use App\Models\Deal;
 use App\Models\Goal;
 use App\Models\Lead;
@@ -18,6 +19,7 @@ use App\Models\Tag;
 use App\Models\Task;
 use App\Models\Team;
 use App\Models\User;
+use App\Reports\ReportEngine;
 use App\Services\CallService;
 use App\Services\LeadService;
 use App\Services\OrganizationProvisioner;
@@ -113,7 +115,8 @@ class DemoSeeder extends Seeder
                 for ($n = 1, $touches = $faker->numberBetween(0, 4); $n <= $touches; $n++) {
                     $type = $faker->randomElement(['call', 'email', 'meeting', 'email', 'call', 'sms', 'whatsapp']);
                     $inbound = in_array($type, ['email', 'sms', 'whatsapp'], true) && $faker->boolean(30);
-                    $when = $createdAt->copy()->addDays($n)->min(now());
+                    // First touch within minutes-to-hours (speed to lead), later ones a day apart.
+                    $when = ($n === 1 ? $createdAt->copy()->addMinutes($faker->numberBetween(4, 420)) : $createdAt->copy()->addDays($n))->min(now());
                     Activity::create([
                         'subject_type' => 'lead', 'subject_id' => $lead->id, 'user_id' => $lead->owner_id,
                         'type' => $type,
@@ -200,6 +203,14 @@ class DemoSeeder extends Seeder
             ] as [$name, $spec, $pinned, $schedule]) {
                 SavedReport::create(['user_id' => $admin->id, 'name' => $name, 'spec' => $spec, 'is_shared' => true, 'pinned' => $pinned, 'schedule' => $schedule]);
             }
+            $reports = SavedReport::orderBy('id')->pluck('id');
+            Dashboard::create(['user_id' => $admin->id, 'name' => 'Sales leadership', 'is_shared' => true, 'tiles' => [
+                ['id' => 'k1', 'kind' => 'kpis', 'type' => 'pipeline', 'span' => 2, 'title' => null],
+                ['id' => 'r1', 'kind' => 'report', 'report_id' => $reports[0], 'span' => 1, 'title' => null],
+                ['id' => 'g1', 'kind' => 'goals', 'span' => 1, 'title' => null],
+                ['id' => 's1', 'kind' => 'spec', 'span' => 1, 'title' => 'Speed to lead by owner', 'spec' => app(ReportEngine::class)->normalize(['entity' => 'leads', 'metric' => 'response_hours', 'dimension' => 'owner', 'range' => 'last_90'])],
+                ['id' => 'r2', 'kind' => 'report', 'report_id' => $reports[1], 'span' => 1, 'title' => null],
+            ]]);
             Goal::create(['metric' => 'revenue_won', 'period' => 'month', 'target' => 150000, 'created_by' => $admin->id]);
             Goal::create(['metric' => 'leads_converted', 'period' => 'quarter', 'target' => 30, 'created_by' => $admin->id]);
             $reps->each(fn (User $rep) => Goal::create(['user_id' => $rep->id, 'metric' => 'calls_logged', 'period' => 'month', 'target' => 12, 'created_by' => $admin->id]));

@@ -47,6 +47,8 @@ class Lead extends Model
             'custom_fields' => 'array',
             'next_follow_up_at' => 'datetime',
             'last_contacted_at' => 'datetime',
+            'first_responded_at' => 'datetime',
+            'sla_alerted_at' => 'datetime',
             'assigned_at' => 'datetime',
             'qualified_at' => 'datetime',
             'converted_at' => 'datetime',

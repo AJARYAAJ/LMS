@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -173,6 +173,24 @@ export const api = createApi({
     sendReport: b.mutation<{ message: string }, number>({
       query: (id) => ({ url: `saved-reports/${id}/send`, method: 'POST' }),
       invalidatesTags: ['SavedReport'],
+    }),
+    askReport: b.mutation<AskAnswer, string>({
+      query: (question) => ({ url: 'reports/ask', method: 'POST', body: { question } }),
+      transformResponse: (r: { data: AskAnswer }) => r.data,
+    }),
+    dashboards: b.query<CustomDashboard[], void>({
+      query: () => 'dashboards',
+      transformResponse: (r: { data: CustomDashboard[] }) => r.data,
+      providesTags: ['CustomDashboard'],
+    }),
+    saveDashboard: b.mutation<CustomDashboard, Partial<CustomDashboard> & { id?: number }>({
+      query: ({ id, ...body }) => ({ url: id ? `dashboards/${id}` : 'dashboards', method: id ? 'PATCH' : 'POST', body }),
+      transformResponse: (r: { data: CustomDashboard }) => r.data,
+      invalidatesTags: ['CustomDashboard'],
+    }),
+    deleteDashboard: b.mutation<void, number>({
+      query: (id) => ({ url: `dashboards/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['CustomDashboard'],
     }),
     goals: b.query<Goal[], { mine?: boolean } | void>({
       query: (p) => ({ url: 'goals', params: p?.mine ? { mine: 1 } : undefined }),
@@ -464,7 +482,7 @@ export const api = createApi({
     }),
     updateOrganization: b.mutation<void, Record<string, unknown>>({
       query: (body) => ({ url: 'settings/organization', method: 'PATCH', body }),
-      invalidatesTags: ['Organization', 'Me'],
+      invalidatesTags: ['Organization', 'Me', 'Reports'],
     }),
     settingsList: b.query<unknown[], { resource: string; tag: SettingsTag }>({
       query: ({ resource }) => `settings/${resource}`,
@@ -605,6 +623,7 @@ export const {
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,
   useSaveReportMutation, useDeleteReportMutation, useSendReportMutation, useGoalsQuery, useSaveGoalMutation, useDeleteGoalMutation,
+  useAskReportMutation, useDashboardsQuery, useSaveDashboardMutation, useDeleteDashboardMutation,
   useLayoutsQuery, useSaveLayoutMutation, useResetLayoutMutation, useAiBriefMutation, useSendMessageMutation, useEnrollmentsQuery, useEnrollMutation, useStopEnrollmentMutation, usePublicFormQuery, useSubmitPublicFormMutation,
 } = api
 
