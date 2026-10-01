@@ -57,6 +57,7 @@ class LeadInsights
             'next_action' => $this->nextAction($lead, $daysSinceTouch, $openTasks, $overdueTasks, $qualification),
             'signals' => $signals,
             'qualification' => $qualification,
+            'prediction' => app(ConversionPredictor::class)->predict($lead),
         ];
     }
 

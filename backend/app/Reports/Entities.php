@@ -10,6 +10,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
+use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Models\Task;
 use App\Models\Team;
@@ -120,6 +121,7 @@ class Entities
                 'response_hours' => ['label' => 'Average first response (hours)', 'format' => 'hours', 'select' => ['s' => 'coalesce(sum('.Sql::hoursBetween('leads.created_at', 'leads.first_responded_at').'), 0)', 'n' => 'count(first_responded_at)'], 'value' => self::ratio('s', 'n')],
                 'responded_rate' => ['label' => 'Leads contacted', 'format' => 'percent', 'select' => ['p' => 'count(first_responded_at)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
                 'within_sla_rate' => ['label' => 'Contacted within target', 'format' => 'percent', 'select' => ['p' => 'sum(case when first_responded_at is not null and '.Sql::hoursBetween('leads.created_at', 'leads.first_responded_at').' <= __SLA__ then 1 else 0 end)', 'n' => 'count(*)'], 'value' => self::rate('p', 'n')],
+                'likelihood' => ['label' => 'Average predicted conversion', 'format' => 'percent', 'select' => ['s' => 'coalesce(sum(conversion_likelihood), 0)', 'n' => 'count(conversion_likelihood)'], 'value' => self::ratio('s', 'n')],
                 'days_to_convert' => ['label' => 'Average days to convert', 'format' => 'decimal', 'select' => ['s' => 'coalesce(sum('.Sql::hoursBetween('leads.created_at', 'leads.converted_at').' / 24.0), 0)', 'n' => 'count(converted_at)'], 'value' => self::ratio('s', 'n')],
             ],
         ];
@@ -137,6 +139,8 @@ class Entities
                 'expected_close' => ['label' => 'Expected close', 'type' => 'date', 'column' => 'deals.expected_close_date', 'date_only' => true],
                 'stage' => ['label' => 'Stage', 'type' => 'model', 'column' => 'pipeline_stage_id', 'model' => PipelineStage::class, 'color' => 'color'],
                 'status' => ['label' => 'Status', 'type' => 'enum', 'column' => 'status', 'values' => ['open', 'won', 'lost']],
+                'pipeline' => ['label' => 'Pipeline', 'type' => 'model', 'column' => 'pipeline_id', 'model' => Pipeline::class],
+                'forecast' => ['label' => 'Forecast category', 'type' => 'enum', 'column' => 'forecast_category', 'values' => Deal::FORECAST, 'labels' => ['best_case' => 'Best case']],
                 'owner' => self::owner('owner_id'),
                 'lost_reason' => ['label' => 'Lost reason', 'type' => 'text', 'column' => 'lost_reason', 'empty' => 'Not given'],
             ],

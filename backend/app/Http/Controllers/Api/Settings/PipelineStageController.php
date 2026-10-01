@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Api\ResourceController;
+use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Support\Rules;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,7 @@ class PipelineStageController extends ResourceController
     {
         return [
             'name' => [$record ? 'sometimes' : 'required', 'string', 'max:60'],
+            'pipeline_id' => ['sometimes', Rules::exists('pipelines')],
             'probability' => ['sometimes', 'integer', 'between:0,100'],
             'display_order' => ['sometimes', 'integer', 'min:0'],
             'color' => Rules::color(),
@@ -30,8 +32,9 @@ class PipelineStageController extends ResourceController
 
     protected function prepare(array $data, Request $request, ?Model $record = null): array
     {
-        if (! $record && ! isset($data['display_order'])) {
-            $data['display_order'] = (int) PipelineStage::max('display_order') + 1;
+        if (! $record) {
+            $data['pipeline_id'] ??= Pipeline::default()->id;
+            $data['display_order'] ??= (int) PipelineStage::where('pipeline_id', $data['pipeline_id'])->max('display_order') + 1;
         }
 
         return $data;

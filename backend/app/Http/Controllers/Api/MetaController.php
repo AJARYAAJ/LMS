@@ -13,7 +13,9 @@ use App\Models\Integration;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
+use App\Models\Pipeline;
 use App\Models\PipelineStage;
+use App\Models\Product;
 use App\Models\Sequence;
 use App\Models\Tag;
 use App\Models\Task;
@@ -43,7 +45,9 @@ class MetaController extends Controller
             'tags' => Tag::orderBy('name')->get(),
             'teams' => Team::orderBy('name')->get(['id', 'name', 'color']),
             'users' => User::where('is_active', true)->orderBy('name')->get(['id', 'name', 'email', 'role', 'avatar_color']),
-            'stages' => PipelineStage::orderBy('display_order')->get(),
+            'pipelines' => Pipeline::orderByDesc('is_default')->orderBy('display_order')->get(['id', 'name', 'is_default']),
+            'stages' => PipelineStage::orderBy('pipeline_id')->orderBy('display_order')->get(),
+            'products' => Product::where('is_active', true)->orderBy('name')->get(['id', 'name', 'sku', 'unit_price', 'billing', 'description']),
             'custom_fields' => CustomField::orderBy('display_order')->get(),
             'email_templates' => EmailTemplate::orderBy('name')->get(['id', 'name', 'category', 'subject', 'body']),
             'sequences' => Sequence::where('is_active', true)->orderBy('name')->get(['id', 'name', 'description', 'steps']),

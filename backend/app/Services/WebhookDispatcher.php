@@ -8,7 +8,7 @@ use App\Models\Webhook;
 class WebhookDispatcher
 {
     public const EVENTS = [
-        'lead.created', 'lead.updated', 'lead.status_changed', 'lead.assigned', 'lead.converted', 'lead.deleted', 'call.completed',
+        'lead.created', 'lead.updated', 'lead.status_changed', 'lead.assigned', 'lead.converted', 'lead.deleted', 'call.completed', 'quote.accepted', 'quote.declined',
     ];
 
     public function dispatch(int $organizationId, string $event, array $payload): void

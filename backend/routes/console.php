@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\AppNotification;
 use App\Reports\ReportEngine;
 use App\Reports\ReportMailer;
+use App\Services\ConversionPredictor;
 use App\Services\OrgMailer;
 use App\Support\Tenant;
 use Illuminate\Support\Facades\Artisan;
@@ -162,3 +163,17 @@ Artisan::command('leads:sla', function () {
 })->purpose('Alert owners about new leads waiting past the response target');
 
 Schedule::command('leads:sla')->everyTenMinutes()->withoutOverlapping();
+
+/*
+ * Re-learn each organization's conversion model from its won / lost leads and
+ * store the predicted likelihood on open leads (for sorting, lists and reports).
+ */
+Artisan::command('leads:predict', function (ConversionPredictor $predictor) {
+    $total = 0;
+    Organization::query()->each(function (Organization $organization) use ($predictor, &$total) {
+        $total += Tenant::run($organization->id, fn () => $predictor->refresh());
+    });
+    $this->info("Scored {$total} open leads.");
+})->purpose('Refresh predicted conversion likelihood');
+
+Schedule::command('leads:predict')->hourlyAt(17)->withoutOverlapping();

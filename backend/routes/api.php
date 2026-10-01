@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\PublicFormController;
+use App\Http\Controllers\Api\PublicQuoteController;
+use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SavedReportController;
 use App\Http\Controllers\Api\SavedViewController;
@@ -40,6 +42,11 @@ Route::prefix('v1')->group(function () {
     Route::post('forms/{slug}', [PublicFormController::class, 'submit'])->middleware('throttle:capture');
 
     // Vendor callbacks (secret token in the URL identifies the organization)
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('public/quotes/{token}', [PublicQuoteController::class, 'show'])->where('token', '[A-Za-z0-9]{40}');
+        Route::post('public/quotes/{token}/respond', [PublicQuoteController::class, 'respond'])->where('token', '[A-Za-z0-9]{40}');
+    });
+
     Route::middleware('throttle:600,1')->prefix('webhooks')->group(function () {
         Route::post('voice/{provider}/{token}', [InboundWebhookController::class, 'voice'])->whereIn('provider', ['vapi', 'retell', 'bland']);
         Route::post('messaging/twilio/{token}', [InboundWebhookController::class, 'twilio']);
@@ -65,6 +72,7 @@ Route::prefix('v1')->group(function () {
         Route::post('leads/{leadId}/calls', [CallController::class, 'callLead'])->whereNumber('leadId');
         Route::post('ai-agents/{agentId}/campaign', [CallController::class, 'campaign'])->whereNumber('agentId');
         Route::get('settings/ai-agents', [Settings\AiAgentController::class, 'index']);
+        Route::get('settings/products', [Settings\ProductController::class, 'index']);
 
         Route::get('meta', MetaController::class);
         Route::get('search', SearchController::class);
@@ -140,6 +148,14 @@ Route::prefix('v1')->group(function () {
 
         // CRM
         Route::get('deals/board', [DealController::class, 'board']);
+        Route::get('deals/forecast', [DealController::class, 'forecast']);
+        Route::get('deals/{dealId}/quotes', [QuoteController::class, 'index'])->whereNumber('dealId');
+        Route::post('deals/{dealId}/quotes', [QuoteController::class, 'store'])->whereNumber('dealId');
+        Route::get('quotes/{id}', [QuoteController::class, 'show'])->whereNumber('id');
+        Route::put('quotes/{id}', [QuoteController::class, 'update'])->whereNumber('id');
+        Route::delete('quotes/{id}', [QuoteController::class, 'destroy'])->whereNumber('id');
+        Route::post('quotes/{id}/send', [QuoteController::class, 'send'])->whereNumber('id')->middleware('throttle:20,1');
+        Route::post('quotes/{id}/duplicate', [QuoteController::class, 'duplicate'])->whereNumber('id');
         Route::post('deals/{id}/move', [DealController::class, 'move'])->whereNumber('id');
         Route::apiResource('deals', DealController::class)->parameters(['deals' => 'id'])->whereNumber('id');
         Route::apiResource('contacts', ContactController::class)->parameters(['contacts' => 'id'])->whereNumber('id');
@@ -164,6 +180,7 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('settings/campaigns', Settings\CampaignController::class)->except('index')->parameters(['campaigns' => 'id'])->whereNumber('id');
             Route::apiResource('settings/email-templates', Settings\EmailTemplateController::class)->except('index')->parameters(['email-templates' => 'id'])->whereNumber('id');
             Route::apiResource('settings/sequences', Settings\SequenceController::class)->except('index')->parameters(['sequences' => 'id'])->whereNumber('id');
+            Route::apiResource('settings/products', Settings\ProductController::class)->except('index')->parameters(['products' => 'id'])->whereNumber('id');
             Route::apiResource('settings/ai-agents', Settings\AiAgentController::class)->except('index')->parameters(['ai-agents' => 'id'])->whereNumber('id');
             Route::get('audit-logs', [AuditLogController::class, 'index']);
         });
@@ -189,6 +206,7 @@ Route::prefix('v1')->group(function () {
                 'lead-statuses' => Settings\LeadStatusController::class,
                 'lead-sources' => Settings\LeadSourceController::class,
                 'pipeline-stages' => Settings\PipelineStageController::class,
+                'pipelines' => Settings\PipelineController::class,
                 'tags' => Settings\TagController::class,
                 'custom-fields' => Settings\CustomFieldController::class,
                 'assignment-rules' => Settings\AssignmentRuleController::class,

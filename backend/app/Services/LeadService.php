@@ -7,6 +7,7 @@ use App\Models\Contact;
 use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadStatus;
+use App\Models\Pipeline;
 use App\Models\PipelineStage;
 use App\Models\User;
 use App\Notifications\AppNotification;
@@ -274,7 +275,7 @@ class LeadService
             if ($options['create_deal'] ?? true) {
                 $stage = ! empty($options['pipeline_stage_id'])
                     ? PipelineStage::findOrFail($options['pipeline_stage_id'])
-                    : PipelineStage::where('is_won', false)->where('is_lost', false)->orderBy('display_order')->first();
+                    : PipelineStage::where('pipeline_id', Pipeline::default()->id)->where('is_won', false)->where('is_lost', false)->orderBy('display_order')->first();
 
                 $deal = Deal::create([
                     'name' => $options['deal_name'] ?? trim(($lead->company ?: $lead->full_name).' deal'),

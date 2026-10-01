@@ -13,7 +13,9 @@ use App\Models\Goal;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
+use App\Models\Pipeline;
 use App\Models\PipelineStage;
+use App\Models\Product;
 use App\Models\SavedReport;
 use App\Models\Tag;
 use App\Models\Task;
@@ -21,8 +23,10 @@ use App\Models\Team;
 use App\Models\User;
 use App\Reports\ReportEngine;
 use App\Services\CallService;
+use App\Services\ConversionPredictor;
 use App\Services\LeadService;
 use App\Services\OrganizationProvisioner;
+use App\Services\QuoteService;
 use App\Support\Tenant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Notification;
@@ -185,6 +189,32 @@ class DemoSeeder extends Seeder
                 ]);
             });
 
+            // Closed-out history (4–12 months ago) with realistic patterns, so the
+            // conversion model and the reports have something to learn from.
+            $convertRate = ['referral' => 0.6, 'partner' => 0.5, 'website' => 0.35, 'trade_show' => 0.3, 'email_campaign' => 0.2, 'api' => 0.25, 'social' => 0.12, 'cold_call' => 0.1];
+            foreach (range(1, 90) as $i) {
+                $source = $sources->random();
+                $rating = $faker->randomElement(['cold', 'warm', 'hot', 'very_high']);
+                $p = ($convertRate[$source->key] ?? 0.25) + ['cold' => -0.08, 'warm' => 0, 'hot' => 0.12, 'very_high' => 0.2][$rating];
+                $won = $faker->randomFloat(2, 0, 1) < $p;
+                $created = now()->subDays(random_int(120, 365))->setTime(random_int(8, 18), random_int(0, 59));
+                $lead = Lead::create([
+                    'first_name' => $faker->firstName(), 'last_name' => $faker->lastName(), 'company' => $faker->company(),
+                    'email' => $faker->unique()->safeEmail(), 'phone' => $faker->boolean(70) ? $faker->e164PhoneNumber() : null,
+                    'industry' => $faker->randomElement($industries), 'lead_source_id' => $source->id, 'rating' => $rating,
+                    'priority' => $faker->randomElement(['low', 'medium', 'high']), 'score' => $won ? random_int(45, 95) : random_int(5, 70),
+                    'owner_id' => $reps->random()->id,
+                    'lead_status_id' => $statuses[$won ? 'converted' : $faker->randomElement(['lost', 'not_interested'])]->id,
+                    'converted_at' => $won ? $created->copy()->addDays(random_int(5, 60)) : null,
+                    'last_contacted_at' => $created->copy()->addDays(random_int(1, 20)),
+                ]);
+                $lead->forceFill([
+                    'created_at' => $created, 'updated_at' => $created,
+                    'first_responded_at' => $created->copy()->addMinutes($won ? random_int(5, 600) : random_int(30, 4000)),
+                ])->saveQuietly();
+            }
+            app(ConversionPredictor::class)->refresh();
+
             // A few lost deals with reasons, so loss analysis has something to show.
             $lostStage = $stages->firstWhere('is_lost', true);
             if ($lostStage) {
@@ -203,6 +233,40 @@ class DemoSeeder extends Seeder
             ] as [$name, $spec, $pinned, $schedule]) {
                 SavedReport::create(['user_id' => $admin->id, 'name' => $name, 'spec' => $spec, 'is_shared' => true, 'pinned' => $pinned, 'schedule' => $schedule]);
             }
+            // Product catalog, a second pipeline and a couple of quotes.
+            foreach ([['Starter plan', 'PLAN-S', 49, 'monthly'], ['Growth plan', 'PLAN-G', 199, 'monthly'], ['Enterprise plan', 'PLAN-E', 999, 'monthly'],
+                ['Onboarding package', 'SRV-ONB', 2500, 'one_time'], ['Premium support', 'SRV-SUP', 1200, 'yearly']] as [$name, $sku, $price, $billing]) {
+                Product::create(['name' => $name, 'sku' => $sku, 'unit_price' => $price, 'billing' => $billing]);
+            }
+            $partners = Pipeline::create(['name' => 'Partnerships', 'display_order' => 1]);
+            foreach ([['Intro', 10, '#64748b'], ['Pilot', 40, '#8b5cf6'], ['Contract', 70, '#f59e0b'], ['Signed', 100, '#10b981', true], ['Dropped', 0, '#ef4444', false, true]] as $i => $st) {
+                PipelineStage::create(['pipeline_id' => $partners->id, 'name' => $st[0], 'probability' => $st[1], 'color' => $st[2], 'display_order' => $i, 'is_won' => $st[3] ?? false, 'is_lost' => $st[4] ?? false]);
+            }
+            $pilot = PipelineStage::where('pipeline_id', $partners->id)->where('name', 'Pilot')->first();
+            Deal::create(['name' => 'Northwind reseller pilot', 'pipeline_stage_id' => $pilot->id, 'owner_id' => $manager->id, 'amount' => 36000, 'currency' => 'USD', 'probability' => 40, 'status' => 'open', 'expected_close_date' => now()->addDays(20)]);
+
+            // A steady open pipeline across stages and reps, closing this quarter (forecast demo).
+            $openStages = $stages->where('is_won', false)->where('is_lost', false)->values();
+            foreach (['Globex expansion', 'Initech renewal', 'Umbrella onboarding', 'Stark analytics', 'Wayne logistics', 'Wonka retail', 'Hooli platform', 'Pied Piper pilot'] as $i => $name) {
+                $stage = $openStages[$i % $openStages->count()];
+                Deal::create(['name' => $name, 'pipeline_stage_id' => $stage->id, 'owner_id' => $reps->concat([$manager])->values()[$i % 4]->id,
+                    'amount' => [12000, 48000, 9500, 75000, 22000, 31000, 64000, 15000][$i], 'currency' => 'USD', 'probability' => $stage->probability,
+                    'status' => 'open', 'expected_close_date' => now()->startOfQuarter()->addDays(10 + $i * 9)->max(now()->addDays(2))]);
+            }
+
+            $quotes = app(QuoteService::class);
+            $products = Product::orderBy('id')->get();
+            Deal::where('status', 'open')->orderByDesc('id')->limit(2)->get()->each(function (Deal $deal, int $i) use ($quotes, $products, $admin) {
+                $quote = $quotes->save($deal, ['title' => "{$deal->name} — proposal", 'discount_percent' => 10, 'tax_percent' => 8, 'items' => [
+                    ['product_id' => $products[1]->id, 'name' => $products[1]->name, 'quantity' => 12, 'unit_price' => $products[1]->unit_price],
+                    ['product_id' => $products[3]->id, 'name' => $products[3]->name, 'quantity' => 1, 'unit_price' => $products[3]->unit_price],
+                ]], $admin);
+                $quote->update(['status' => 'sent', 'sent_at' => now()->subDays(3)]);
+                if ($i === 1) {
+                    $quotes->respond($quote, true, 'Jamie Buyer', null, '127.0.0.1');
+                }
+            });
+
             $reports = SavedReport::orderBy('id')->pluck('id');
             Dashboard::create(['user_id' => $admin->id, 'name' => 'Sales leadership', 'is_shared' => true, 'tiles' => [
                 ['id' => 'k1', 'kind' => 'kpis', 'type' => 'pipeline', 'span' => 2, 'title' => null],
