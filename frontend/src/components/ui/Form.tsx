@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { Children, cloneElement, forwardRef, isValidElement, useId, type InputHTMLAttributes, type ReactElement, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import clsx from 'clsx'
 import { Check } from 'lucide-react'
 import { COLOR_SWATCHES } from '@/lib/constants'
@@ -11,16 +11,26 @@ export function Field({ label, error, hint, children, className, required }: {
   className?: string
   required?: boolean
 }) {
+  // Tie the label (and hint/error) to the control so screen readers announce them together.
+  const auto = useId()
+  const only = Children.count(children) === 1 && isValidElement(children) ? (children as ReactElement<{ id?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }>) : null
+  const id = only?.props.id ?? auto
+  const noteId = `${id}-note`
+  const note = error || hint
+  const control = only
+    ? cloneElement(only, { id, ...(note ? { 'aria-describedby': noteId } : {}), ...(error ? { 'aria-invalid': true } : {}) })
+    : children
+
   return (
     <div className={className}>
       {label && (
-        <label className="label">
+        <label className="label" htmlFor={only ? id : undefined}>
           {label}
           {required && <span className="ml-0.5 text-rose-500">*</span>}
         </label>
       )}
-      {children}
-      {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+      {control}
+      {error ? <p id={noteId} className="mt-1 text-xs text-rose-600">{error}</p> : hint ? <p id={noteId} className="mt-1 text-xs text-slate-500">{hint}</p> : null}
     </div>
   )
 }

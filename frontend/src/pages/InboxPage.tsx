@@ -130,9 +130,9 @@ export function InboxPage() {
             <Input icon={<Search className="size-4" />} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search people or companies" aria-label="Search conversations" />
             <div className="flex gap-2">
               <Select value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)} aria-label="Filter conversations">
-                <option value="all">All conversations</option>
+                <option value="all">All</option>
                 <option value="unread">Unread{data?.unread_threads ? ` (${data.unread_threads})` : ''}</option>
-                <option value="awaiting">Waiting for our reply</option>
+                <option value="awaiting">Needs reply</option>
                 <option value="mine">My leads</option>
               </Select>
               <Select value={channel} onChange={(e) => setChannel(e.target.value)} aria-label="Channel">
