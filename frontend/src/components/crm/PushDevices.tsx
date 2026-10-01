@@ -53,8 +53,8 @@ export function PushDevices() {
           {error && <p className="mt-1 text-xs text-rose-600" role="alert">{error}</p>}
         </div>
         {supported && data && (mine
-          ? <Button size="sm" variant="ghost" onClick={turnOff}>Turn off</Button>
-          : <Button size="sm" variant="secondary" loading={subState.isLoading} onClick={turnOn}>Turn on</Button>)}
+          ? <Button size="sm" variant="ghost" onClick={turnOff}>Turn off push</Button>
+          : <Button size="sm" variant="secondary" loading={subState.isLoading} onClick={turnOn}>Turn on push</Button>)}
       </div>
       {!!data?.devices.length && (
         <ul className="mt-3 space-y-1 text-xs text-slate-500">
