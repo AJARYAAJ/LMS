@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateApiKey;
+use App\Http\Middleware\EnforceTokenScopes;
 use App\Http\Middleware\EnsureCanWrite;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\ResolveTenant;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => ResolveTenant::class,
             'role' => EnsureRole::class,
             'writable' => EnsureCanWrite::class,
+            'scopes' => EnforceTokenScopes::class,
             'api.key' => AuthenticateApiKey::class,
         ]);
         $middleware->throttleApi();

@@ -40,7 +40,7 @@ abstract class TestCase extends BaseTestCase
 
     protected function as(User $user): static
     {
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['*']); // like the SPA's own tokens
 
         return $this;
     }

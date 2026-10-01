@@ -974,3 +974,13 @@ export interface ConnectedAccount {
   last_synced_at: string | null
   last_error: string | null
 }
+
+export interface OAuthAppRow {
+  id: number
+  name: string
+  client_id: string
+  redirect_uris: string[]
+  confidential: boolean
+  active_users: number
+  created_at: string
+}

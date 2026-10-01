@@ -4,7 +4,7 @@ import clsx from 'clsx'
 import {
   Building, Cable, LayoutTemplate, PlugZap, Calculator, ClipboardCheck, FileInput, GitBranch, GripVertical, Layers, Package, ListChecks, Pencil, Plus, Recycle, Route, Settings,
   Shield, Tag as TagIcon, Trash2, Users, Workflow, Zap,
-} from 'lucide-react'
+ KeyRound } from 'lucide-react'
 import { useAction, useCurrentUser } from '@/app/hooks'
 import {
   resources, useDeleteSettingMutation, useOrganizationQuery, useReorderStatusesMutation, useSaveSettingMutation, useSettings,
@@ -20,6 +20,7 @@ import { LayoutEditor } from './LayoutEditor'
 import { PipelinesSection, ProductsSection } from './SalesSettings'
 import { FieldPermissionsSection } from './FieldPermissionsSection'
 import { IntegrationsHub } from './IntegrationsHub'
+import { OAuthAppsSection } from './OAuthAppsSection'
 
 const sections = [
   { key: 'organization', label: 'Organization', icon: Building, group: 'Workspace' },
@@ -40,6 +41,7 @@ const sections = [
   { key: 'integrations-hub', label: 'Integrations', icon: PlugZap, group: 'Connect' },
   { key: 'forms', label: 'Web forms', icon: FileInput, group: 'Connect' },
   { key: 'integrations', label: 'API & webhooks', icon: Cable, group: 'Connect' },
+  { key: 'oauth-apps', label: 'OAuth apps', icon: KeyRound, group: 'Connect' },
 ]
 
 export function SettingsPage() {
@@ -83,6 +85,7 @@ export function SettingsPage() {
           {active === 'integrations-hub' && <IntegrationsHub />}
           {active === 'forms' && <WebForms />}
           {active === 'integrations' && <Integrations />}
+          {active === 'oauth-apps' && <OAuthAppsSection />}
         </div>
       </div>
     </div>

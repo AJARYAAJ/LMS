@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery, type BaseQueryFn, type FetchArgs, type Fetch
 import type {
   Account, Activity, AiAgent, AiBrief, ApiKey, Call, CallStats, Condition, IntegrationProvider, LayoutEntity, NotificationPrefs, PageLayout, EmailTemplate, Enrollment, Insights, Sequence, WebForm, WebFormField, AppNotification, AssignmentRule, AuditLog, AutomationRule, Campaign, Contact,
   CustomField, Deal, Lead, LeadSource, LeadStatus, Meta, Note, Paginated, PipelineStage, SavedView,
-  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, Broadcast, BroadcastDetail, BroadcastInput, BroadcastRecipientRow, AttributionResult, ConnectedAccount, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
+  ScoringRule, SearchResult, Tag, Task, Team, User, Webhook, Goal, AskAnswer, CustomDashboard, Forecast, Pipeline, Product, PublicQuote, Quote, InboxThread, InboxConversation, BookingPageSettings, PublicBookingPage, ConsentEntry, FieldPermissionSettings, Broadcast, BroadcastDetail, BroadcastInput, BroadcastRecipientRow, AttributionResult, ConnectedAccount, OAuthAppRow, ReportCatalog, ReportResult, ReportSpec, SavedReport, TypeReport,
 } from '@/types'
 import { loggedOut } from '@/features/auth/authSlice'
 
@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution', 'ConnectedAccount', 'Push',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution', 'ConnectedAccount', 'Push', 'OAuthApp',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -522,6 +522,30 @@ export const api = createApi({
         dispatch(api.util.invalidateTags([{ type: 'Inbox', id: 'LIST' }]))
       },
     }),
+    describeOAuth: b.query<{ app: { name: string; client_id: string }; organization: string; scopes: { key: string; label: string }[]; redirect_host: string }, Record<string, string>>({
+      query: (params) => ({ url: 'oauth/authorize', params }),
+      transformResponse: (r: { data: never }) => r.data,
+    }),
+    approveOAuth: b.mutation<{ redirect: string }, Record<string, string | boolean>>({
+      query: (body) => ({ url: 'oauth/authorize', method: 'POST', body }),
+      transformResponse: (r: { data: { redirect: string } }) => r.data,
+    }),
+    oauthApps: b.query<OAuthAppRow[], void>({
+      query: () => 'settings/oauth-apps',
+      transformResponse: (r: { data: OAuthAppRow[] }) => r.data,
+      providesTags: ['OAuthApp'],
+    }),
+    createOAuthApp: b.mutation<{ data: OAuthAppRow; client_secret: string | null }, { name: string; redirect_uris: string[]; confidential: boolean }>({
+      query: (body) => ({ url: 'settings/oauth-apps', method: 'POST', body }),
+      invalidatesTags: ['OAuthApp'],
+    }),
+    rotateOAuthSecret: b.mutation<{ client_secret: string }, number>({
+      query: (id) => ({ url: `settings/oauth-apps/${id}/rotate-secret`, method: 'POST' }),
+    }),
+    deleteOAuthApp: b.mutation<void, number>({
+      query: (id) => ({ url: `settings/oauth-apps/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['OAuthApp'],
+    }),
     pushConfig: b.query<{ vapid_public_key: string; fcm: boolean; devices: { id: number; kind: 'webpush' | 'fcm'; device: string | null; last_used_at: string | null; created_at: string }[] }, void>({
       query: () => 'push',
       transformResponse: (r: { data: never }) => r.data,
@@ -867,6 +891,7 @@ export const {
   useCallsQuery, useCallQuery, useCallStatsQuery, useCallLeadMutation, useLaunchCampaignMutation, useCancelCallMutation, useSimulateInboundCallMutation,
   useBroadcastsQuery, useBroadcastQuery, useBroadcastRecipientsQuery, useBroadcastAudienceMutation, useSaveBroadcastMutation,
   useDeleteBroadcastMutation, useLaunchBroadcastMutation, useBroadcastActionMutation, useAttributionQuery,
+  useDescribeOAuthQuery, useApproveOAuthMutation, useOauthAppsQuery, useCreateOAuthAppMutation, useRotateOAuthSecretMutation, useDeleteOAuthAppMutation,
   usePushConfigQuery, useSubscribePushMutation, useUnsubscribePushMutation, useConnectedAccountsQuery, useConnectAccountMutation, useUpdateConnectedAccountMutation, useSyncAccountMutation, useDisconnectAccountMutation,
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,

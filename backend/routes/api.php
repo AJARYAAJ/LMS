@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\MetaController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
+use App\Http\Controllers\Api\OAuthServerController;
 use App\Http\Controllers\Api\PrivacyController;
 use App\Http\Controllers\Api\PublicFormController;
 use App\Http\Controllers\Api\PublicQuoteController;
@@ -52,6 +53,11 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/sso/exchange', [AuthController::class, 'ssoExchange']);
     });
     Route::get('sso/callback', [SsoController::class, 'callback'])->middleware('throttle:30,1');
+    // OAuth 2.0 token endpoints for third-party apps
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('oauth/token', [OAuthServerController::class, 'token']);
+        Route::post('oauth/revoke', [OAuthServerController::class, 'revoke']);
+    });
     Route::get('connected-accounts/callback', [ConnectedAccountController::class, 'callback'])->middleware('throttle:30,1');
 
     // Hosted web-to-lead forms (public, by slug)
@@ -89,7 +95,7 @@ Route::prefix('v1')->group(function () {
         Route::get('leads', [RestHookController::class, 'leads']);
     });
 
-    Route::middleware(['auth:sanctum', 'tenant', 'writable'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant', 'scopes', 'writable'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::patch('auth/profile', [AuthController::class, 'updateProfile']);
@@ -199,6 +205,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('broadcasts/{id}/recipients', [BroadcastController::class, 'recipients']);
             });
         });
+        Route::get('oauth/authorize', [OAuthServerController::class, 'describe']);
+        Route::post('oauth/authorize', [OAuthServerController::class, 'approve'])->middleware('throttle:30,1');
         Route::get('push', [PushController::class, 'config']);
         Route::post('push/subscriptions', [PushController::class, 'subscribe'])->middleware('throttle:20,1');
         Route::delete('push/subscriptions', [PushController::class, 'unsubscribe']);
@@ -261,6 +269,11 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::middleware('role:admin')->prefix('settings')->group(function () {
+            Route::get('oauth-apps', [Settings\OAuthAppController::class, 'index']);
+            Route::post('oauth-apps', [Settings\OAuthAppController::class, 'store']);
+            Route::patch('oauth-apps/{id}', [Settings\OAuthAppController::class, 'update'])->whereNumber('id');
+            Route::post('oauth-apps/{id}/rotate-secret', [Settings\OAuthAppController::class, 'rotate'])->whereNumber('id');
+            Route::delete('oauth-apps/{id}', [Settings\OAuthAppController::class, 'destroy'])->whereNumber('id');
             Route::get('organization', [Settings\OrganizationController::class, 'show']);
             Route::patch('organization', [Settings\OrganizationController::class, 'update']);
 

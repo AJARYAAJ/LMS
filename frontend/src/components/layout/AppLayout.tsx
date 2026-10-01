@@ -21,7 +21,7 @@ export function AppLayout() {
     if (me) dispatch(userLoaded(me))
   }, [me, dispatch])
 
-  if (!token || isError) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (!token || isError) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
 
   if (!user) {
     return (
