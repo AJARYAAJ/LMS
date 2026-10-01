@@ -32,6 +32,9 @@ class SimulatorProvider implements VoiceProvider
      */
     public static function conversation(Call $call): array
     {
+        if ($call->direction === 'inbound') {
+            return self::inbound($call);
+        }
         $lead = $call->lead;
         $agent = $call->agent;
         mt_srand($call->id * 7919 + (int) $lead?->score);
@@ -102,5 +105,57 @@ class SimulatorProvider implements VoiceProvider
         };
 
         return ['status' => 'completed', 'final' => true, 'duration_seconds' => 120 + count($t) * 9, 'transcript' => $t, 'summary' => $summary];
+    }
+
+    /** Someone rings the AI receptionist: an enquiry, a pricing question, a callback request or a wrong number. */
+    private static function inbound(Call $call): array
+    {
+        $lead = $call->lead;
+        $org = (string) $lead?->organization?->name;
+        mt_srand($call->id * 104729);
+        $unknown = $lead->first_name === 'Caller';
+        $people = [['Priya', 'Nair', 'Northwind Logistics'], ['Daniel', 'Okafor', 'Brightline Dental'], ['Sofia', 'Marquez', 'Peak Fitness'], ['Liam', 'Chen', 'Harbor Realty'], ['Emma', 'Novak', 'Atlas Builders']];
+        [$first, $last, $company] = $unknown ? $people[mt_rand(0, count($people) - 1)] : [$lead->first_name, $lead->last_name, $lead->company ?: 'my company'];
+        $roll = mt_rand(1, 100);
+        $scenario = match (true) {
+            $roll <= 45 => 'meeting',
+            $roll <= 70 => 'interested',
+            $roll <= 90 => 'callback',
+            default => 'not_interested',
+        };
+
+        $t = [['role' => 'agent', 'text' => strtr((string) $call->agent?->first_message ?: 'Thanks for calling {organization}. How can I help?', ['{organization}' => $org, '{first_name}' => $first, '{name}' => "{$first} {$last}", '{company}' => $company])]];
+        if ($scenario === 'not_interested') {
+            $t[] = ['role' => 'lead', 'text' => 'Oh — sorry, I think I dialled the wrong number. I was trying to reach a pharmacy.'];
+            $t[] = ['role' => 'agent', 'text' => 'No problem at all. Have a lovely day!'];
+
+            return ['status' => 'completed', 'final' => true, 'duration_seconds' => 24, 'transcript' => $t, 'summary' => 'Wrong number — the caller was looking for a different business. Not interested.'];
+        }
+        $t[] = ['role' => 'lead', 'text' => "Hi, this is {$first} {$last} from {$company}."];
+        $t[] = ['role' => 'agent', 'text' => "Nice to meet you, {$first}. What can we help you with today?"];
+        $t[] = ['role' => 'lead', 'text' => 'We keep losing track of enquiries and follow-ups, and I heard you could help with that.'];
+        $t[] = ['role' => 'agent', 'text' => 'We can. When are you hoping to have something in place?'];
+        $t[] = ['role' => 'lead', 'text' => 'Ideally within the next month or so.'];
+        $email = strtolower($first).'@'.preg_replace('/[^a-z]/', '', strtolower($company)).'.com';
+
+        if ($scenario === 'callback') {
+            $t[] = ['role' => 'lead', 'text' => "I'm driving right now though — could someone call me back Thursday afternoon?"];
+            $t[] = ['role' => 'agent', 'text' => "Of course. I'll have one of the team call you back Thursday at 3 PM. Thanks, {$first}!"];
+            $summary = "{$first} {$last} ({$company}) called in about managing enquiries and follow-ups; wants a callback Thursday afternoon. Timeline: within a month.";
+        } elseif ($scenario === 'interested') {
+            $t[] = ['role' => 'lead', 'text' => "Could you email me pricing first? It's {$email}."];
+            $t[] = ['role' => 'agent', 'text' => "Absolutely — I'll send an overview and pricing to {$email} today. Thanks for calling, {$first}!"];
+            $summary = "{$first} {$last} ({$company}) called in and is interested; asked for an overview and pricing by email. Timeline: within a month.";
+        } else {
+            $t[] = ['role' => 'agent', 'text' => 'Would a 30-minute demo with one of our specialists help? I have Tuesday at 10 AM free.'];
+            $t[] = ['role' => 'lead', 'text' => 'Tuesday at 10 works for me.'];
+            $t[] = ['role' => 'agent', 'text' => "Perfect — you're booked for Tuesday at 10 AM. You'll get an invite shortly. Thanks, {$first}!"];
+            $summary = "{$first} {$last} ({$company}) called in about losing track of enquiries, needs a solution within a month and booked a demo for Tuesday at 10 AM.";
+        }
+
+        return [
+            'status' => 'completed', 'final' => true, 'duration_seconds' => 90 + count($t) * 8, 'transcript' => $t, 'summary' => $summary,
+            'caller' => ['first_name' => $first, 'last_name' => $last, 'company' => $company === 'my company' ? null : $company, 'email' => $scenario === 'interested' ? $email : null],
+        ];
     }
 }

@@ -48,7 +48,11 @@ class VapiProvider implements VoiceProvider
         $message = $payload['message'] ?? $payload;
         $type = $message['type'] ?? null;
         $vapiCall = $message['call'] ?? [];
-        $base = ['provider_call_id' => $vapiCall['id'] ?? null, 'call_id' => $vapiCall['metadata']['leadflow_call_id'] ?? null];
+        $base = [
+            'provider_call_id' => $vapiCall['id'] ?? null, 'call_id' => $vapiCall['metadata']['leadflow_call_id'] ?? null,
+            'direction' => ($vapiCall['type'] ?? '') === 'inboundPhoneCall' ? 'inbound' : 'outbound',
+            'from_number' => $vapiCall['customer']['number'] ?? null,
+        ];
 
         if ($type === 'status-update') {
             return $base + ['status' => match ($message['status'] ?? '') {

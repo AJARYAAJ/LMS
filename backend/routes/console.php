@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Broadcast;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\SavedReport;
@@ -8,11 +9,13 @@ use App\Models\User;
 use App\Notifications\AppNotification;
 use App\Reports\ReportEngine;
 use App\Reports\ReportMailer;
+use App\Services\BroadcastService;
 use App\Services\ConversionPredictor;
 use App\Services\OrgMailer;
 use App\Support\Tenant;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Validation\ValidationException;
 
 /*
  * Notify assignees about tasks whose reminder time (or due time, when no
@@ -177,3 +180,34 @@ Artisan::command('leads:predict', function (ConversionPredictor $predictor) {
 })->purpose('Refresh predicted conversion likelihood');
 
 Schedule::command('leads:predict')->hourlyAt(17)->withoutOverlapping();
+
+/*
+ * Email campaigns: launch the ones whose scheduled time has come, and finish
+ * A/B tests whose test window is over by sending the winner to everyone else.
+ */
+Artisan::command('broadcasts:run', function (BroadcastService $broadcasts) {
+    $launched = 0;
+    $finished = 0;
+    Broadcast::withoutGlobalScopes()->where(fn ($q) => $q->where('status', 'scheduled')->where('scheduled_at', '<=', now()))
+        ->orWhere(fn ($q) => $q->where('status', 'testing')->where('winner_at', '<=', now()))
+        ->get()
+        ->each(function (Broadcast $broadcast) use ($broadcasts, &$launched, &$finished) {
+            Tenant::run($broadcast->organization_id, function () use ($broadcast, $broadcasts, &$launched, &$finished) {
+                try {
+                    if ($broadcast->status === 'scheduled') {
+                        $broadcasts->launch($broadcast);
+                        $launched++;
+                    } else {
+                        $broadcasts->pickWinner($broadcast);
+                        $finished++;
+                    }
+                } catch (ValidationException $e) {
+                    $broadcast->update(['status' => 'canceled']);
+                    $broadcast->creator?->notify(new AppNotification("“{$broadcast->name}” was not sent", collect($e->errors())->flatten()->first(), '/campaigns/email', 'campaign'));
+                }
+            });
+        });
+    $this->info("Launched {$launched}, picked {$finished} winners.");
+})->purpose('Launch scheduled email campaigns and finish A/B tests');
+
+Schedule::command('broadcasts:run')->everyFiveMinutes()->withoutOverlapping();

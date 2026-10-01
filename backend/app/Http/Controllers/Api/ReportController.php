@@ -9,6 +9,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadSource;
 use App\Models\User;
+use App\Reports\Attribution;
 use App\Reports\Entities;
 use App\Reports\GoalTracker;
 use App\Reports\ReportEngine;
@@ -63,6 +64,15 @@ class ReportController extends Controller
         $range = ReportRange::resolve($request->query('range'), $request->query('from'), $request->query('to'));
 
         return response()->json(['data' => $reports->build($request->user(), $type, $range)]);
+    }
+
+    /** Multi-touch attribution of leads, conversions and won revenue. */
+    public function attribution(Request $request, Attribution $attribution): JsonResponse
+    {
+        $request->validate(['by' => ['nullable', 'in:campaign,source,channel'], 'range' => ['nullable', 'string'], 'from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        $range = ReportRange::resolve($request->query('range', 'last_90'), $request->query('from'), $request->query('to'));
+
+        return response()->json(['data' => $attribution->run($request->user(), (string) $request->query('by', 'campaign'), $range)]);
     }
 
     public function leads(Request $request): JsonResponse

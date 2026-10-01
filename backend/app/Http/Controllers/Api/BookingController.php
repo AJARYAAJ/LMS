@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BookingPage;
 use App\Models\Task;
+use App\Models\Touchpoint;
 use App\Notifications\AppNotification;
 use App\Services\ActivityRecorder;
 use App\Services\DuplicateDetector;
@@ -105,11 +106,14 @@ class BookingController extends Controller
 
         $result = Tenant::run($page->organization_id, function () use ($page, $data, $start, $leads, $duplicates, $activities) {
             [$first, $last] = array_pad(explode(' ', trim($data['name']), 2), 2, null);
-            $lead = $duplicates->find($data['email'], $data['phone'] ?? null)->first()
-                ?? $leads->create(array_filter([
-                    'first_name' => $first, 'last_name' => $last, 'email' => $data['email'], 'phone' => $data['phone'] ?? null,
-                    'company' => $data['company'] ?? null, 'owner_id' => $page->user_id, 'priority' => 'high',
-                ]), null, 'booking_page');
+            $lead = $duplicates->find($data['email'], $data['phone'] ?? null)->first();
+            if ($lead) {
+                Touchpoint::record($lead, 'booking_page', null, null, $page->title);
+            }
+            $lead ??= $leads->create(array_filter([
+                'first_name' => $first, 'last_name' => $last, 'email' => $data['email'], 'phone' => $data['phone'] ?? null,
+                'company' => $data['company'] ?? null, 'owner_id' => $page->user_id, 'priority' => 'high',
+            ]), null, 'booking_page');
 
             $local = $start->copy()->setTimezone($page->timezone);
             Task::create([

@@ -9,6 +9,7 @@ use App\Models\Lead;
 use App\Models\LeadStatus;
 use App\Models\Pipeline;
 use App\Models\PipelineStage;
+use App\Models\Touchpoint;
 use App\Models\User;
 use App\Notifications\AppNotification;
 use Illuminate\Support\Arr;
@@ -42,6 +43,9 @@ class LeadService
             $data['created_by'] = $actor?->id;
 
             $lead = Lead::create($data);
+            if ($channel !== 'manual') {
+                Touchpoint::where('lead_id', $lead->id)->update(['channel' => $channel]);
+            }
 
             if ($tags !== null) {
                 $lead->tags()->sync($tags);

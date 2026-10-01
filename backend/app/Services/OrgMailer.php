@@ -17,7 +17,8 @@ class OrgMailer
 {
     public function __construct(private IntegrationManager $integrations) {}
 
-    public function send(int $organizationId, string $to, ?string $toName, string $subject, string $text, ?array $replyTo = null): string
+    /** Sends plain text, or HTML with the text as its alternative part when $html is given. */
+    public function send(int $organizationId, string $to, ?string $toName, string $subject, string $text, ?array $replyTo = null, ?string $html = null): string
     {
         $integration = $this->integrations->active($organizationId, 'email');
 
@@ -27,7 +28,7 @@ class OrgMailer
                 'from' => array_filter(['email' => $integration->setting('from_address'), 'name' => $integration->setting('from_name')]),
                 'reply_to' => $replyTo ? ['email' => $replyTo[0], 'name' => $replyTo[1] ?? null] : null,
                 'subject' => $subject,
-                'content' => [['type' => 'text/plain', 'value' => $text]],
+                'content' => array_values(array_filter([['type' => 'text/plain', 'value' => $text], $html ? ['type' => 'text/html', 'value' => $html] : null])),
             ]));
             if ($response->failed()) {
                 throw new RuntimeException('SendGrid rejected the email: '.($response->json('errors.0.message') ?? $response->status()));
@@ -51,15 +52,20 @@ class OrgMailer
             ]]);
         }
 
-        Mail::mailer($mailer === 'default' ? null : $mailer)->raw($text, function ($m) use ($to, $toName, $subject, $replyTo, $integration) {
+        $configure = function ($m) use ($to, $toName, $subject, $replyTo, $integration, $html, $text) {
             $m->to($to, $toName)->subject($subject);
+            if ($html) {
+                $m->getSymfonyMessage()->text($text);
+            }
             if ($integration?->provider === 'smtp') {
                 $m->from($integration->setting('from_address'), $integration->setting('from_name'));
             }
             if ($replyTo) {
                 $m->replyTo($replyTo[0], $replyTo[1] ?? null);
             }
-        });
+        };
+        $transport = Mail::mailer($mailer === 'default' ? null : $mailer);
+        $html ? $transport->html($html, $configure) : $transport->raw($text, $configure);
 
         return $mailer === 'default' ? config('mail.default') : 'smtp';
     }

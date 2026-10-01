@@ -33,7 +33,11 @@ class RetellProvider implements VoiceProvider
     {
         $event = $payload['event'] ?? null;
         $c = $payload['call'] ?? [];
-        $base = ['provider_call_id' => $c['call_id'] ?? null, 'call_id' => $c['metadata']['leadflow_call_id'] ?? null];
+        $base = [
+            'provider_call_id' => $c['call_id'] ?? null, 'call_id' => $c['metadata']['leadflow_call_id'] ?? null,
+            'direction' => ($c['direction'] ?? 'outbound') === 'inbound' ? 'inbound' : 'outbound',
+            'from_number' => $c['from_number'] ?? null,
+        ];
 
         if ($event === 'call_started') {
             return $base + ['status' => 'in_progress', 'final' => false];

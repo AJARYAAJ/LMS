@@ -30,10 +30,14 @@ class InboundWebhookController extends Controller
             return response()->json(['ok' => true, 'ignored' => true]);
         }
 
-        Tenant::run($integration->organization_id, function () use ($data, $provider) {
+        Tenant::run($integration->organization_id, function () use ($data, $provider, $integration) {
             $call = Call::where('provider', $provider)
                 ->where(fn ($q) => $q->where('provider_call_id', $data['provider_call_id'] ?? '__none__')->orWhere('id', $data['call_id'] ?? 0))
                 ->first();
+            // Someone rang the organization's AI receptionist number.
+            if (! $call && ($data['direction'] ?? null) === 'inbound' && ! empty($data['from_number']) && ! empty($data['provider_call_id'])) {
+                $call = app(CallService::class)->receiveInbound($integration, $data['from_number'], $data['provider_call_id']);
+            }
             if ($call) {
                 app(CallService::class)->update($call->load(['lead.organization', 'agent']), $data);
             }

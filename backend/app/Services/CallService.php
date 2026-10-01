@@ -3,14 +3,17 @@
 namespace App\Services;
 
 use App\Integrations\IntegrationManager;
+use App\Jobs\SimulateCallResult;
 use App\Jobs\StartCall;
 use App\Models\AiAgent;
 use App\Models\Call;
 use App\Models\Integration;
 use App\Models\Lead;
 use App\Models\Task;
+use App\Models\Touchpoint;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Support\Phone;
 use App\Voice\BlandProvider;
 use App\Voice\RetellProvider;
 use App\Voice\SimulatorProvider;
@@ -67,6 +70,9 @@ class CallService
         if (! $agent->is_active) {
             throw ValidationException::withMessages(['agent' => 'This AI agent is paused.']);
         }
+        if ($agent->mode === 'inbound') {
+            throw ValidationException::withMessages(['agent' => "{$agent->name} answers incoming calls. Pick an outbound agent to call leads."]);
+        }
         if (! $lead->phone) {
             throw ValidationException::withMessages(['phone' => "{$lead->full_name} has no phone number."]);
         }
@@ -122,6 +128,55 @@ class CallService
         }
 
         return ['campaign_key' => $key, 'queued' => $queued, 'skipped' => $skipped];
+    }
+
+    /**
+     * Someone called the organization's AI receptionist: match the caller to a
+     * lead by phone number (or create one) and open an inbound call.
+     */
+    public function receiveInbound(Integration $integration, string $from, ?string $providerCallId, ?AiAgent $agent = null): Call
+    {
+        $agent ??= AiAgent::where('mode', 'inbound')->where('is_active', true)
+            ->where(fn ($q) => $q->where('integration_id', $integration->id)->orWhereNull('integration_id'))
+            ->orderByRaw('case when integration_id is null then 1 else 0 end')->first();
+        $digits = Phone::digits($from);
+        $lead = strlen($digits) >= 6 ? Phone::whereMatches(Lead::query(), $digits)->latest('id')->first() : null;
+
+        if ($lead) {
+            Touchpoint::record($lead, 'phone', null, null, 'Called in');
+        } else {
+            $lead = app(LeadService::class)->create([
+                'first_name' => 'Caller', 'last_name' => substr($digits, -4) ?: null, 'phone' => $from, 'priority' => 'high',
+            ], null, 'phone');
+        }
+
+        return Call::create([
+            'organization_id' => $lead->organization_id,
+            'lead_id' => $lead->id,
+            'ai_agent_id' => $agent?->id,
+            'direction' => 'inbound',
+            'provider' => $integration->provider,
+            'provider_call_id' => $providerCallId,
+            'to_number' => preg_replace('/[^\d+]/', '', $from),
+            'status' => 'in_progress',
+            'started_at' => now(),
+        ]);
+    }
+
+    /** Try the receptionist without a phone line: a simulated caller rings in. */
+    public function simulateInbound(AiAgent $agent, ?string $from = null): Call
+    {
+        if ($agent->mode !== 'inbound') {
+            throw ValidationException::withMessages(['agent' => 'Only receptionist (inbound) agents answer calls.']);
+        }
+        $simulator = Integration::firstOrCreate(
+            ['organization_id' => $agent->organization_id, 'category' => 'voice', 'provider' => 'simulator'],
+            ['config' => [], 'is_active' => true],
+        );
+        $call = $this->receiveInbound($simulator, $from ?: '+1555'.random_int(1000000, 9999999), 'sim_in_'.Str::lower(Str::random(12)), $agent);
+        SimulateCallResult::dispatch($call->id)->delay(now()->addSeconds(3))->afterCommit();
+
+        return $call;
     }
 
     /**
@@ -204,13 +259,19 @@ class CallService
 
         $label = Str::headline($analysis['outcome']);
         $manual = $call->provider === 'manual';
+        $inbound = $call->direction === 'inbound';
+        // The receptionist learned who an unknown caller is.
+        if ($inbound && ! empty($data['caller'])) {
+            $known = array_filter($data['caller'], fn ($v, $k) => $v && in_array($k, ['first_name', 'last_name', 'company', 'email', 'requirements'], true), ARRAY_FILTER_USE_BOTH);
+            $lead->forceFill($lead->first_name === 'Caller' ? $known : array_filter($known, fn ($v, $k) => ! $lead->{$k}, ARRAY_FILTER_USE_BOTH))->save();
+        }
         if (! $call->summary) {
             $call->forceFill(['summary' => "{$label}.".($analysis['next_step'] ? " Next step: {$analysis['next_step']}." : '')])->save();
         }
-        $this->activities->record($lead, 'call', ($manual ? 'Call' : 'AI call')." — {$label}", [
+        $this->activities->record($lead, 'call', ($manual ? 'Call' : ($inbound ? 'Incoming call (AI receptionist)' : 'AI call'))." — {$label}", [
             'user_id' => $call->user_id,
             'description' => $call->summary,
-            'direction' => 'outbound',
+            'direction' => $inbound ? 'inbound' : 'outbound',
             'outcome' => $label,
             'duration_minutes' => $call->duration_seconds ? (int) ceil($call->duration_seconds / 60) : null,
             'meta' => ['call_id' => $call->id, 'agent' => $call->agent?->name, 'provider' => $call->provider],
@@ -241,7 +302,7 @@ class CallService
         // People who logged the call themselves don't need a notification about it.
         if ($recipient && ! in_array($analysis['outcome'], ['no_answer'], true) && ! ($manual && $recipient->id === $call->user_id)) {
             $recipient->notify(new AppNotification(
-                ($manual ? 'Call' : 'AI call').": {$label} — {$lead->full_name}",
+                ($manual ? 'Call' : ($inbound ? 'Incoming call' : 'AI call')).": {$label} — {$lead->full_name}",
                 (string) $call->summary,
                 "/leads/{$lead->id}",
                 'ai_call',

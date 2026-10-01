@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\CalendarFeedController;
 use App\Http\Controllers\Api\CallController;
 use App\Http\Controllers\Api\CallNotesController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DashboardBuilderController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DealController;
+use App\Http\Controllers\Api\EmailTrackingController;
 use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\InboundWebhookController;
 use App\Http\Controllers\Api\InboxController;
@@ -59,6 +61,12 @@ Route::prefix('v1')->group(function () {
         Route::post('public/quotes/{token}/respond', [PublicQuoteController::class, 'respond'])->where('token', '[A-Za-z0-9]{40}');
     });
 
+    // Campaign email tracking (open pixel, signed click redirects)
+    Route::middleware('throttle:600,1')->where(['token' => '[A-Za-z0-9]{40}'])->group(function () {
+        Route::get('t/o/{token}.gif', [EmailTrackingController::class, 'open']);
+        Route::get('t/c/{token}/{signature}', [EmailTrackingController::class, 'click'])->where('signature', '[a-f0-9]{24}');
+    });
+
     Route::middleware('throttle:600,1')->prefix('webhooks')->group(function () {
         Route::post('voice/{provider}/{token}', [InboundWebhookController::class, 'voice'])->whereIn('provider', ['vapi', 'retell', 'bland']);
         Route::post('messaging/twilio/{token}', [InboundWebhookController::class, 'twilio']);
@@ -90,6 +98,7 @@ Route::prefix('v1')->group(function () {
         Route::post('calls/{id}/cancel', [CallController::class, 'cancel'])->whereNumber('id');
         Route::post('leads/{leadId}/calls', [CallController::class, 'callLead'])->whereNumber('leadId');
         Route::post('ai-agents/{agentId}/campaign', [CallController::class, 'campaign'])->whereNumber('agentId');
+        Route::post('ai-agents/{agentId}/simulate-inbound', [CallController::class, 'simulateInbound'])->whereNumber('agentId')->middleware('throttle:20,1');
         Route::get('settings/ai-agents', [Settings\AiAgentController::class, 'index']);
         Route::get('settings/products', [Settings\ProductController::class, 'index']);
 
@@ -99,6 +108,7 @@ Route::prefix('v1')->group(function () {
         Route::get('reports/leads', [ReportController::class, 'leads']);
         Route::get('reports/catalog', [ReportController::class, 'catalog']);
         Route::post('reports/run', [ReportController::class, 'run'])->middleware('throttle:120,1');
+        Route::get('reports/attribution', [ReportController::class, 'attribution']);
         Route::get('reports/type/{type}', [ReportController::class, 'type']);
         Route::post('reports/ask', [ReportController::class, 'ask'])->middleware('throttle:30,1');
         Route::get('dashboards', [DashboardBuilderController::class, 'index']);
@@ -168,6 +178,20 @@ Route::prefix('v1')->group(function () {
         // CRM
         Route::get('deals/board', [DealController::class, 'board']);
         Route::get('deals/forecast', [DealController::class, 'forecast']);
+        Route::middleware('role:admin,manager')->group(function () {
+            Route::get('broadcasts', [BroadcastController::class, 'index']);
+            Route::post('broadcasts', [BroadcastController::class, 'store']);
+            Route::post('broadcasts/audience', [BroadcastController::class, 'audience']);
+            Route::whereNumber('id')->group(function () {
+                Route::get('broadcasts/{id}', [BroadcastController::class, 'show']);
+                Route::put('broadcasts/{id}', [BroadcastController::class, 'update']);
+                Route::delete('broadcasts/{id}', [BroadcastController::class, 'destroy']);
+                Route::post('broadcasts/{id}/launch', [BroadcastController::class, 'launch'])->middleware('throttle:20,1');
+                Route::post('broadcasts/{id}/cancel', [BroadcastController::class, 'cancel']);
+                Route::post('broadcasts/{id}/pick-winner', [BroadcastController::class, 'pickWinner']);
+                Route::get('broadcasts/{id}/recipients', [BroadcastController::class, 'recipients']);
+            });
+        });
         Route::get('inbox', [InboxController::class, 'index']);
         Route::get('inbox/summary', [InboxController::class, 'summary']);
         Route::get('inbox/{leadId}', [InboxController::class, 'show'])->whereNumber('leadId');

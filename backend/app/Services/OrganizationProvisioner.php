@@ -242,5 +242,21 @@ class OrganizationProvisioner
             ],
             'max_duration_seconds' => 300,
         ]);
+
+        AiAgent::create([
+            'organization_id' => $organization->id,
+            'mode' => 'inbound',
+            'name' => 'Max — AI receptionist',
+            'integration_id' => $simulator->id,
+            'goal' => 'Answer incoming calls, find out who is calling and what they need, qualify new enquiries and book a call with the right person.',
+            'first_message' => 'Thanks for calling {organization}, this is Max. Who do I have the pleasure of speaking with?',
+            'voice' => 'echo',
+            'language' => 'en-US',
+            'questions' => [
+                ['key' => 'need', 'question' => 'What can we help you with today?'],
+                ['key' => 'timeline', 'question' => 'When are you hoping to get this sorted?'],
+            ],
+            'max_duration_seconds' => 600,
+        ]);
     }
 }

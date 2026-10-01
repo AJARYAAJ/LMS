@@ -35,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
             Models\ScoringRule::class, Models\AutomationRule::class, Models\Webhook::class, Models\ApiKey::class,
             Models\Task::class, Models\Note::class, Models\Activity::class, Models\SavedView::class,
             Models\EmailTemplate::class, Models\Sequence::class, Models\SequenceEnrollment::class, Models\WebForm::class,
-            Models\Integration::class, Models\AiAgent::class, Models\Call::class, Models\SavedReport::class, Models\Goal::class, Models\Dashboard::class, Models\Pipeline::class, Models\Product::class, Models\Quote::class, Models\BookingPage::class,
+            Models\Integration::class, Models\AiAgent::class, Models\Call::class, Models\SavedReport::class, Models\Goal::class, Models\Dashboard::class, Models\Pipeline::class, Models\Product::class, Models\Quote::class, Models\BookingPage::class, Models\Broadcast::class, Models\Touchpoint::class,
         ])->mapWithKeys(fn (string $class) => [Str::snake(class_basename($class)) => $class])->all());
 
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(240)->by($request->user()?->id ?: $request->ip()));

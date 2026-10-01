@@ -141,6 +141,14 @@ class Lead extends Model
         return FieldPermissions::strip('lead', parent::toArray());
     }
 
+    protected static function booted(): void
+    {
+        // Every new lead's arrival is its first marketing touch.
+        static::created(function (Lead $lead) {
+            Touchpoint::record($lead, 'capture', $lead->campaign_id, $lead->lead_source_id);
+        });
+    }
+
     public function calls(): HasMany
     {
         return $this->hasMany(Call::class);

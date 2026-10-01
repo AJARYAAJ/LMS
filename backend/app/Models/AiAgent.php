@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'integration_id', 'goal', 'first_message', 'voice', 'language', 'questions', 'max_duration_seconds', 'is_active'])]
+#[Fillable(['mode', 'name', 'integration_id', 'goal', 'first_message', 'voice', 'language', 'questions', 'max_duration_seconds', 'is_active'])]
 class AiAgent extends Model
 {
     use BelongsToOrganization;

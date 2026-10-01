@@ -34,6 +34,7 @@ class CallController extends Controller
             ->when($request->query('outcome'), fn ($q, $v) => $q->whereIn('outcome', explode(',', $v)))
             ->when($request->query('ai_agent_id'), fn ($q, $v) => $q->where('ai_agent_id', $v))
             ->when($request->query('lead_id'), fn ($q, $v) => $q->where('lead_id', $v))
+            ->when($request->query('direction'), fn ($q, $v) => $q->where('direction', $v))
             ->when($request->query('campaign_key'), fn ($q, $v) => $q->where('campaign_key', $v))
             ->latest('id')
             ->paginate(min((int) $request->query('per_page', 25), 100));
@@ -98,6 +99,16 @@ class CallController extends Controller
             ->get();
 
         return response()->json(['data' => $this->calls->campaign($agent, $leads, $request->user(), $data['limit'] ?? 25)], 201);
+    }
+
+    /** Ring the AI receptionist from a simulated caller (no phone line needed). */
+    public function simulateInbound(Request $request, int $agentId): JsonResponse
+    {
+        abort_unless($request->user()->hasRole(User::ADMIN, User::MANAGER), 403, 'Only admins and managers can test the receptionist.');
+        $data = $request->validate(['phone' => ['nullable', 'string', 'max:40']]);
+        $call = $this->calls->simulateInbound(AiAgent::findOrFail($agentId), $data['phone'] ?? null);
+
+        return response()->json(['data' => $call->fresh(['agent:id,name', 'lead:id,first_name,last_name,phone'])], 201);
     }
 
     public function cancel(Request $request, int $id): JsonResponse
