@@ -246,6 +246,7 @@ class OrganizationProvisioner
         AiAgent::create([
             'organization_id' => $organization->id,
             'mode' => 'inbound',
+            'transfer_mode' => 'owner',
             'name' => 'Max — AI receptionist',
             'integration_id' => $simulator->id,
             'goal' => 'Answer incoming calls, find out who is calling and what they need, qualify new enquiries and book a call with the right person.',

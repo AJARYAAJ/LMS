@@ -564,6 +564,8 @@ export interface IntegrationProvider {
 export interface AiAgent {
   id: number
   mode: 'outbound' | 'inbound'
+  transfer_mode: 'none' | 'owner' | 'number'
+  transfer_number: string | null
   name: string
   integration_id: number | null
   integration?: { id: number; provider: string; status: string } | null
@@ -601,7 +603,7 @@ export interface Call {
   summary: string | null
   outcome: string | null
   sentiment: 'positive' | 'neutral' | 'negative' | null
-  extracted: { confirmed?: string[]; follow_up_at?: string | null; next_step?: string | null; analyzer?: string } | null
+  extracted: { confirmed?: string[]; follow_up_at?: string | null; next_step?: string | null; analyzer?: string; transferred_to?: string | null } | null
   error: string | null
   created_at: string
 }

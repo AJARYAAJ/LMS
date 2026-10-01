@@ -76,7 +76,7 @@ class VapiProvider implements VoiceProvider
             'status' => match (true) {
                 str_contains($reason, 'no-answer'), str_contains($reason, 'busy') => 'no_answer',
                 str_contains($reason, 'voicemail') => 'voicemail',
-                str_contains($reason, 'error'), str_contains($reason, 'failed') => 'failed',
+                str_contains($reason, 'error') && ! str_contains($reason, 'forward'), str_contains($reason, 'failed') => 'failed',
                 default => 'completed',
             },
             'final' => true,
@@ -85,6 +85,38 @@ class VapiProvider implements VoiceProvider
             'transcript' => $transcript,
             'summary' => $message['analysis']['summary'] ?? $message['summary'] ?? null,
             'cost' => isset($message['cost']) ? (float) $message['cost'] : null,
+            'transferred' => str_contains($reason, 'forwarded') || str_contains($reason, 'transfer'),
         ];
+    }
+
+    /**
+     * Vapi asks which assistant should answer an incoming call ("assistant-request").
+     * The receptionist gets the caller's context and, when set up, a transfer tool
+     * that hands the call to a person.
+     */
+    public static function inboundAssistant(AiAgent $agent, Lead $lead, Call $call, ?array $transfer, string $webhookUrl): array
+    {
+        $known = $lead->first_name !== 'Caller';
+        $context = $known ? "The caller is probably {$lead->full_name}".($lead->company ? " from {$lead->company}" : '').'.' : 'The caller is not in the CRM yet: ask for their name, company and email.';
+        $handoff = $transfer
+            ? "If the caller asks for a person, is an existing customer with an issue, or is ready to buy, say you're connecting them to {$transfer['name']} and use the transferCall tool."
+            : 'If the caller asks for a person, take a message and promise a callback.';
+
+        return ['assistant' => array_filter([
+            'firstMessage' => strtr($agent->first_message, ['{organization}' => (string) $lead->organization?->name, '{first_name}' => $known ? $lead->first_name : 'there', '{name}' => $known ? $lead->full_name : 'there', '{company}' => (string) $lead->company]),
+            'model' => array_filter([
+                'provider' => 'anthropic', 'model' => 'claude-opus-5',
+                'messages' => [['role' => 'system', 'content' => trim("You are the friendly receptionist for {$lead->organization?->name}.\nGoal: {$agent->goal}\n{$context}\n{$handoff}\nNever invent prices or commitments.")]],
+                'tools' => $transfer ? [[
+                    'type' => 'transferCall',
+                    'destinations' => [['type' => 'number', 'number' => $transfer['number'], 'message' => "Connecting you to {$transfer['name']} now — one moment.", 'description' => "Hand the caller to {$transfer['name']}"]],
+                ]] : null,
+            ]),
+            'voice' => ['provider' => 'vapi', 'voiceId' => $agent->voice],
+            'maxDurationSeconds' => $agent->max_duration_seconds,
+            'server' => ['url' => $webhookUrl],
+            'serverMessages' => ['status-update', 'end-of-call-report'],
+            'metadata' => ['leadflow_call_id' => $call->id],
+        ])];
     }
 }

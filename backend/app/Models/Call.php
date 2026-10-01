@@ -18,7 +18,7 @@ class Call extends Model
 
     public const FINAL = ['completed', 'no_answer', 'voicemail', 'failed', 'canceled'];
 
-    public const OUTCOMES = ['interested', 'not_interested', 'callback', 'meeting_booked', 'wrong_number', 'voicemail', 'no_answer'];
+    public const OUTCOMES = ['interested', 'not_interested', 'callback', 'meeting_booked', 'wrong_number', 'voicemail', 'no_answer', 'transferred'];
 
     protected function casts(): array
     {

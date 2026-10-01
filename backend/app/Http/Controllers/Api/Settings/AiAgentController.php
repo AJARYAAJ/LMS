@@ -34,6 +34,8 @@ class AiAgentController extends ResourceController
         return [
             'name' => [$req, 'string', 'max:80'],
             'mode' => ['sometimes', 'in:outbound,inbound'],
+            'transfer_mode' => ['sometimes', 'in:none,owner,number'],
+            'transfer_number' => ['nullable', 'required_if:transfer_mode,number', 'string', 'max:40', 'regex:/^\+?[0-9 ()\-]{6,}$/'],
             'integration_id' => ['nullable', Rules::exists('integrations')],
             'goal' => [$req, 'string', 'max:2000'],
             'first_message' => [$req, 'string', 'max:500'],

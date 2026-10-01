@@ -209,6 +209,20 @@ function AgentModal({ agent, onClose }: { agent: Partial<AiAgent> | null; onClos
           <Segmented value={form.mode ?? 'outbound'} onChange={(v) => set('mode', v)} options={[{ value: 'outbound', label: 'Calls leads', icon: <PhoneCall /> }, { value: 'inbound', label: 'Answers calls (receptionist)', icon: <PhoneIncoming /> }]} />
           {form.mode === 'inbound' && <p className="mt-2 text-xs text-slate-500">Callers are matched to leads by phone number; unknown callers become new leads. Connect a Vapi or Retell phone number and point its server URL at the webhook shown under Settings → Integrations.</p>}
         </div>
+        {form.mode === 'inbound' && (
+          <>
+            <Field label="Hand callers to a person" hint="When a caller asks for someone, or is an existing customer with an issue.">
+              <Select value={form.transfer_mode ?? 'none'} onChange={(e) => set('transfer_mode', e.target.value as AiAgent['transfer_mode'])}>
+                <option value="none">Don't transfer — take a message</option>
+                <option value="owner">The lead's owner (else the team number)</option>
+                <option value="number">Always the team number</option>
+              </Select>
+            </Field>
+            <Field label="Team number" hint={form.transfer_mode === 'owner' ? 'Used when the owner has no phone on their profile.' : undefined}>
+              <Input value={form.transfer_number ?? ''} onChange={(e) => set('transfer_number', e.target.value || null)} placeholder="+1 555 010 2000" disabled={form.transfer_mode === 'none'} />
+            </Field>
+          </>
+        )}
         <Field label="Name" required><Input value={form.name ?? ''} onChange={(e) => set('name', e.target.value)} placeholder={form.mode === 'inbound' ? 'Max — AI receptionist' : 'Ava — inbound qualifier'} /></Field>
         <Field label="Voice provider" hint="Connect vendors under Settings → Integrations">
           <Select value={form.integration_id ?? ''} onChange={(e) => set('integration_id', e.target.value ? Number(e.target.value) : null)} placeholder="Best available">

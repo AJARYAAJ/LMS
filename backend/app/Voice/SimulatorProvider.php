@@ -7,6 +7,7 @@ use App\Models\AiAgent;
 use App\Models\Call;
 use App\Models\Integration;
 use App\Models\Lead;
+use App\Services\CallService;
 
 /**
  * Built-in demo provider: nobody is dialled. A realistic conversation is
@@ -117,7 +118,9 @@ class SimulatorProvider implements VoiceProvider
         $people = [['Priya', 'Nair', 'Northwind Logistics'], ['Daniel', 'Okafor', 'Brightline Dental'], ['Sofia', 'Marquez', 'Peak Fitness'], ['Liam', 'Chen', 'Harbor Realty'], ['Emma', 'Novak', 'Atlas Builders']];
         [$first, $last, $company] = $unknown ? $people[mt_rand(0, count($people) - 1)] : [$lead->first_name, $lead->last_name, $lead->company ?: 'my company'];
         $roll = mt_rand(1, 100);
+        $transfer = $call->agent ? app(CallService::class)->transferTarget($call->agent, $lead) : null;
         $scenario = match (true) {
+            $transfer && $roll <= 30 => 'transfer',
             $roll <= 45 => 'meeting',
             $roll <= 70 => 'interested',
             $roll <= 90 => 'callback',
@@ -137,6 +140,17 @@ class SimulatorProvider implements VoiceProvider
         $t[] = ['role' => 'agent', 'text' => 'We can. When are you hoping to have something in place?'];
         $t[] = ['role' => 'lead', 'text' => 'Ideally within the next month or so.'];
         $email = strtolower($first).'@'.preg_replace('/[^a-z]/', '', strtolower($company)).'.com';
+
+        if ($scenario === 'transfer') {
+            $t[] = ['role' => 'lead', 'text' => 'Honestly I’d rather talk it through with someone on your team — is anyone available?'];
+            $t[] = ['role' => 'agent', 'text' => "Of course. I'm connecting you to {$transfer['name']} now — one moment, {$first}."];
+
+            return [
+                'status' => 'completed', 'final' => true, 'duration_seconds' => 70, 'transcript' => $t, 'transferred' => true,
+                'summary' => "{$first} {$last} ({$company}) called about managing enquiries, wanted to speak to a person and was transferred to {$transfer['name']}.",
+                'caller' => ['first_name' => $first, 'last_name' => $last, 'company' => $company === 'my company' ? null : $company],
+            ];
+        }
 
         if ($scenario === 'callback') {
             $t[] = ['role' => 'lead', 'text' => "I'm driving right now though — could someone call me back Thursday afternoon?"];

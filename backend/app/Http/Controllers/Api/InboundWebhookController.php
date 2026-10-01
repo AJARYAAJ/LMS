@@ -11,6 +11,7 @@ use App\Services\ActivityRecorder;
 use App\Services\CallService;
 use App\Support\Phone;
 use App\Support\Tenant;
+use App\Voice\VapiProvider;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,6 +25,23 @@ class InboundWebhookController extends Controller
     public function voice(Request $request, string $provider, string $token): JsonResponse
     {
         $integration = $this->integration($provider, $token);
+
+        // Vapi asks which assistant should answer an incoming call: the receptionist, with the caller's context.
+        if ($provider === 'vapi' && $request->input('message.type') === 'assistant-request') {
+            return Tenant::run($integration->organization_id, function () use ($request, $integration) {
+                $from = (string) $request->input('message.call.customer.number', '');
+                $calls = app(CallService::class);
+                $call = Call::where('provider', 'vapi')->where('provider_call_id', $request->input('message.call.id'))->first()
+                    ?? ($from ? $calls->receiveInbound($integration, $from, $request->input('message.call.id')) : null);
+                $agent = $call?->agent;
+                if (! $call || ! $agent) {
+                    return response()->json(['error' => 'No receptionist is set up for this number.']);
+                }
+
+                return response()->json(VapiProvider::inboundAssistant($agent, $call->lead, $call, $calls->transferTarget($agent, $call->lead), $request->url()));
+            });
+        }
+
         $data = CallService::provider($provider)->parse($request->all());
 
         if (! $data) {

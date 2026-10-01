@@ -61,6 +61,7 @@ class RetellProvider implements VoiceProvider
             'recording_url' => $c['recording_url'] ?? null,
             'transcript' => collect($c['transcript_object'] ?? [])->map(fn ($t) => ['role' => ($t['role'] ?? '') === 'agent' ? 'agent' : 'lead', 'text' => (string) ($t['content'] ?? '')])->all(),
             'summary' => $c['call_analysis']['call_summary'] ?? null,
+            'transferred' => $reason === 'call_transfer',
             'extracted' => array_filter(['sentiment' => isset($c['call_analysis']['user_sentiment']) ? strtolower($c['call_analysis']['user_sentiment']) : null]),
         ];
     }

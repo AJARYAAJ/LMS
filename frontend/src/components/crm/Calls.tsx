@@ -18,6 +18,7 @@ export const OUTCOMES: Record<string, { label: string; color: string }> = {
   voicemail: { label: 'Voicemail', color: '#f59e0b' },
   no_answer: { label: 'No answer', color: '#94a3b8' },
   wrong_number: { label: 'Wrong number', color: '#64748b' },
+  transferred: { label: 'Transferred', color: '#0d9488' },
 }
 
 const STATUS_COLOR: Record<CallStatus, string> = {

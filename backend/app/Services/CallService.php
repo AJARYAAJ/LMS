@@ -136,9 +136,10 @@ class CallService
      */
     public function receiveInbound(Integration $integration, string $from, ?string $providerCallId, ?AiAgent $agent = null): Call
     {
+        // The receptionist tied to this phone line, else one with no line set, else any receptionist.
         $agent ??= AiAgent::where('mode', 'inbound')->where('is_active', true)
-            ->where(fn ($q) => $q->where('integration_id', $integration->id)->orWhereNull('integration_id'))
-            ->orderByRaw('case when integration_id is null then 1 else 0 end')->first();
+            ->orderByRaw('case when integration_id = ? then 0 when integration_id is null then 1 else 2 end', [$integration->id])
+            ->orderBy('id')->first();
         $digits = Phone::digits($from);
         $lead = strlen($digits) >= 6 ? Phone::whereMatches(Lead::query(), $digits)->latest('id')->first() : null;
 
@@ -161,6 +162,24 @@ class CallService
             'status' => 'in_progress',
             'started_at' => now(),
         ]);
+    }
+
+    /**
+     * Who the receptionist hands a caller to: the lead's owner (when they have a
+     * phone), otherwise the agent's fallback number.
+     *
+     * @return array{name: string, number: string, user_id: ?int}|null
+     */
+    public function transferTarget(AiAgent $agent, Lead $lead): ?array
+    {
+        if ($agent->transfer_mode === 'owner' && $lead->owner?->is_active && $lead->owner->phone) {
+            return ['name' => $lead->owner->name, 'number' => $lead->owner->phone, 'user_id' => $lead->owner->id];
+        }
+        if (in_array($agent->transfer_mode, ['owner', 'number'], true) && $agent->transfer_number) {
+            return ['name' => 'our team', 'number' => $agent->transfer_number, 'user_id' => null];
+        }
+
+        return null;
     }
 
     /** Try the receptionist without a phone line: a simulated caller rings in. */
@@ -237,6 +256,12 @@ class CallService
     private function finalize(Call $call, array $data): Call
     {
         $analysis = $this->analyzer->analyze($call, $data['status'], $call->transcript ?? [], $data['summary'] ?? null);
+        // The receptionist handed the caller to a person: they take it from here.
+        $transferredTo = null;
+        if (! empty($data['transferred'])) {
+            $transferredTo = ($call->agent && $call->lead ? $this->transferTarget($call->agent, $call->lead)['name'] ?? null : null) ?? 'a person';
+            $analysis = [...$analysis, 'outcome' => 'transferred', 'follow_up_at' => null, 'next_step' => "Talking with {$transferredTo}"];
+        }
         $followUp = $analysis['follow_up_at'] ? Carbon::parse($analysis['follow_up_at']) : null;
 
         $call->fill([
@@ -249,6 +274,7 @@ class CallService
                 'follow_up_at' => $followUp?->toIso8601String(),
                 'next_step' => $analysis['next_step'],
                 'analyzer' => $analysis['analyzer'],
+                'transferred_to' => $transferredTo,
             ],
         ])->save();
 
