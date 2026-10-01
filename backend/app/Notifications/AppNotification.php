@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\User;
 use App\Notifications\Channels\ChatChannel;
 use App\Notifications\Channels\OrgMailChannel;
+use App\Notifications\Channels\PushChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
@@ -54,12 +55,13 @@ class AppNotification extends Notification
         }
 
         if ($this->kind === 'test') {
-            return ['database', OrgMailChannel::class, ChatChannel::class];
+            return ['database', OrgMailChannel::class, ChatChannel::class, PushChannel::class];
         }
 
         return array_values(array_filter([
             self::preference($notifiable, $this->kind, 'in_app') || self::preference($notifiable, $this->kind, 'browser') ? 'database' : null,
             self::preference($notifiable, $this->kind, 'email') ? OrgMailChannel::class : null,
+            self::preference($notifiable, $this->kind, 'browser') ? PushChannel::class : null,
             $this->toChat ? ChatChannel::class : null,
         ]));
     }

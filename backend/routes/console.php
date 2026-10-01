@@ -8,6 +8,7 @@ use App\Models\SavedReport;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Push\WebPush;
 use App\Reports\ReportEngine;
 use App\Reports\ReportMailer;
 use App\Services\BroadcastService;
@@ -229,3 +230,10 @@ Artisan::command('mailboxes:sync', function (Mailbox $mailbox) {
 })->purpose('Sync connected mailboxes');
 
 Schedule::command('mailboxes:sync')->everyFiveMinutes()->withoutOverlapping();
+
+Artisan::command('push:vapid', function () {
+    $keys = WebPush::generateKeys();
+    $this->line("VAPID_PUBLIC_KEY={$keys['public']}");
+    $this->line("VAPID_PRIVATE_KEY={$keys['private']}");
+    $this->comment('Add these to .env. Changing keys signs everyone out of push, so set them once.');
+})->purpose('Generate a VAPID key pair for Web Push');

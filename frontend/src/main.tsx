@@ -1,3 +1,4 @@
+import { handleNativeTaps } from '@/lib/push'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
@@ -13,6 +14,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 installSpotlight()
 
 // Installable app (PWA): register the service worker in production builds only.
+handleNativeTaps()
+
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => undefined))
 }

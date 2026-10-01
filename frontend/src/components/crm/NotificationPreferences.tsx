@@ -5,12 +5,13 @@ import { useAction, usePermissions, useToast } from '@/app/hooks'
 import { useNotificationPrefsQuery, useTestNotificationMutation, useUpdateNotificationPrefsMutation } from '@/services/api'
 import { Button, Card, PageLoader, Toggle } from '@/components/ui'
 import { browserPermission, requestBrowserPermission } from '@/lib/browserNotify'
+import { PushDevices } from '@/components/crm/PushDevices'
 
 type Channel = 'in_app' | 'email' | 'browser'
 const CHANNELS: { key: Channel; label: string; icon: typeof Mail }[] = [
   { key: 'in_app', label: 'In app', icon: BellRing },
   { key: 'email', label: 'Email', icon: Mail },
-  { key: 'browser', label: 'Desktop', icon: MonitorSmartphone },
+  { key: 'browser', label: 'Push', icon: MonitorSmartphone },
 ]
 
 /** Per-event × per-channel notification matrix, daily digest, desktop permission and team chat routing. */
@@ -74,6 +75,7 @@ export function NotificationPreferences() {
             {permission === 'default' && <Button size="sm" variant="secondary" onClick={async () => setPermission(await requestBrowserPermission())}>Allow</Button>}
             {permission === 'granted' && <span className="text-xs font-semibold text-emerald-600">● On</span>}
           </div>
+          <PushDevices />
 
           {admin && (
             <div>

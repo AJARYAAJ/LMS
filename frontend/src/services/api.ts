@@ -95,7 +95,7 @@ export const api = createApi({
     'Me', 'Meta', 'Lead', 'Leads', 'Dashboard', 'Reports', 'Activity', 'Note', 'Task', 'Deal', 'Contact',
     'Account', 'Notification', 'Organization', 'LeadStatus', 'LeadSource', 'PipelineStage', 'Tag',
     'CustomField', 'Team', 'AssignmentRule', 'ScoringRule', 'AutomationRule', 'Webhook', 'Campaign',
-    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution', 'ConnectedAccount',
+    'User', 'ApiKey', 'Audit', 'SavedView', 'Score', 'EmailTemplate', 'Sequence', 'WebForm', 'Enrollment', 'Insights', 'Trash', 'Queue', 'Layout', 'Integration', 'AiAgent', 'Call', 'NotificationPrefs', 'SavedReport', 'Goal', 'CustomDashboard', 'Quote', 'Pipeline', 'Product', 'Inbox', 'BookingPage', 'CalendarFeed', 'TwoFactor', 'FieldPermissions', 'Broadcast', 'Attribution', 'ConnectedAccount', 'Push',
   ],
   endpoints: (b) => ({
     // ---------------------------------------------------------------- auth
@@ -522,6 +522,19 @@ export const api = createApi({
         dispatch(api.util.invalidateTags([{ type: 'Inbox', id: 'LIST' }]))
       },
     }),
+    pushConfig: b.query<{ vapid_public_key: string; fcm: boolean; devices: { id: number; kind: 'webpush' | 'fcm'; device: string | null; last_used_at: string | null; created_at: string }[] }, void>({
+      query: () => 'push',
+      transformResponse: (r: { data: never }) => r.data,
+      providesTags: ['Push'],
+    }),
+    subscribePush: b.mutation<void, { endpoint?: string; keys?: { p256dh?: string; auth?: string }; fcm_token?: string; device?: string }>({
+      query: (body) => ({ url: 'push/subscriptions', method: 'POST', body }),
+      invalidatesTags: ['Push'],
+    }),
+    unsubscribePush: b.mutation<void, { endpoint?: string; fcm_token?: string; id?: number }>({
+      query: (body) => ({ url: 'push/subscriptions', method: 'DELETE', body }),
+      invalidatesTags: ['Push'],
+    }),
     connectedAccounts: b.query<{ accounts: ConnectedAccount[]; providers: { key: 'google' | 'microsoft'; label: string; available: boolean }[] }, void>({
       query: () => 'connected-accounts',
       transformResponse: (r: { data: never }) => r.data,
@@ -854,7 +867,7 @@ export const {
   useCallsQuery, useCallQuery, useCallStatsQuery, useCallLeadMutation, useLaunchCampaignMutation, useCancelCallMutation, useSimulateInboundCallMutation,
   useBroadcastsQuery, useBroadcastQuery, useBroadcastRecipientsQuery, useBroadcastAudienceMutation, useSaveBroadcastMutation,
   useDeleteBroadcastMutation, useLaunchBroadcastMutation, useBroadcastActionMutation, useAttributionQuery,
-  useConnectedAccountsQuery, useConnectAccountMutation, useUpdateConnectedAccountMutation, useSyncAccountMutation, useDisconnectAccountMutation,
+  usePushConfigQuery, useSubscribePushMutation, useUnsubscribePushMutation, useConnectedAccountsQuery, useConnectAccountMutation, useUpdateConnectedAccountMutation, useSyncAccountMutation, useDisconnectAccountMutation,
   useNotificationPrefsQuery, useUpdateNotificationPrefsMutation, useTestNotificationMutation,
   useReportCatalogQuery, useRunReportQuery, useTypeReportQuery, useSavedReportsQuery, useRunSavedReportQuery,
   useSaveReportMutation, useDeleteReportMutation, useSendReportMutation, useGoalsQuery, useSaveGoalMutation, useDeleteGoalMutation,

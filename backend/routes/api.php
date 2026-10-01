@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\PrivacyController;
 use App\Http\Controllers\Api\PublicFormController;
 use App\Http\Controllers\Api\PublicQuoteController;
+use App\Http\Controllers\Api\PushController;
 use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\RestHookController;
@@ -198,6 +199,9 @@ Route::prefix('v1')->group(function () {
                 Route::get('broadcasts/{id}/recipients', [BroadcastController::class, 'recipients']);
             });
         });
+        Route::get('push', [PushController::class, 'config']);
+        Route::post('push/subscriptions', [PushController::class, 'subscribe'])->middleware('throttle:20,1');
+        Route::delete('push/subscriptions', [PushController::class, 'unsubscribe']);
         Route::get('connected-accounts', [ConnectedAccountController::class, 'index']);
         Route::post('connected-accounts/{provider}/connect', [ConnectedAccountController::class, 'connect'])->whereIn('provider', ['google', 'microsoft']);
         Route::patch('connected-accounts/{id}', [ConnectedAccountController::class, 'update'])->whereNumber('id');

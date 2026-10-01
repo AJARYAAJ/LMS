@@ -47,6 +47,19 @@ return [
         'tenant' => env('MICROSOFT_TENANT', 'common'),
     ],
 
+    // Push notifications. VAPID keys are created automatically on first use when not set
+    // (php artisan push:vapid prints a pair to pin in the environment).
+    'webpush' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT'),
+    ],
+
+    // Native app push through Firebase: the service-account JSON (or a path to it).
+    'fcm' => [
+        'credentials' => env('FCM_CREDENTIALS'),
+    ],
+
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5'),
