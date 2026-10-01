@@ -145,14 +145,35 @@ Everything marked "Next" and most of "Later" in the previous roadmap is now in t
 
 Honest limits: vendor paths that need live accounts (Deepgram transcription, Vapi / Retell inbound calls, SendGrid HTML email) are built to the vendors' documented formats and covered by faked HTTP tests, but were not exercised against the real services. Email opens come from a tracking pixel, so they are approximate (image blocking hides opens; privacy proxies can inflate them); clicks are reliable.
 
-## 9. Roadmap — what is left
+## 9. Iteration 7 — the rest of the roadmap
+
+| Area | Feature | Pattern | Status |
+|---|---|---|---|
+| Platform | **Single sign-on** — Google Workspace, Microsoft Entra ID or any OpenID Connect provider (Okta, Auth0, OneLogin, Keycloak…) per organization: email domains pick the workspace, new people are created with a chosen role, SSO can be required (admins keep a password fallback). Authorization code + PKCE; the SPA receives a one-time code, never a token in the URL | Salesforce / HubSpot SSO | ✅ |
+| Engagement | **Gmail / Outlook mailbox sync** — each person connects their own Google or Microsoft account; emails exchanged with leads land on timelines and in the inbox (deduplicated), owners are notified of replies, and emails sent from LeadFlow go out from the person's real address. Tokens are encrypted and refreshed automatically | HubSpot / Salesforce inbox connect | ✅ |
+| Engagement | **Two-way calendar sync** — busy times from the connected calendar block booking-page slots; booked meetings are created on the calendar with the lead invited | Calendly / HubSpot meetings | ✅ |
+| Platform | **Push notifications** — standard Web Push (RFC 8030 / 8291 / 8292: aes128gcm encryption and VAPID signing implemented on OpenSSL) to phones and desktops even when LeadFlow is closed; per-event "Push" column, per-device on/off, dead subscriptions pruned | — | ✅ |
+| Platform | **Native mobile shell** — `mobile/` Capacitor project for iOS and Android with native push through Firebase Cloud Messaging (HTTP v1, service-account auth) and tap-to-open | Salesforce / HubSpot mobile apps | ✅ (scaffold; build with Xcode / Android Studio) |
+| Platform | **OAuth apps for the public API** — admins register server or public (PKCE) apps; people approve them on a consent screen; hour-long access tokens limited to `read` / `write` scopes and kept away from settings, account and security endpoints; rotating refresh tokens with reuse detection; RFC 7009 revocation | Salesforce connected apps / HubSpot OAuth | ✅ |
+| Marketing | **Landing pages** — hero, text, features, testimonial, lead form and call-to-action blocks with a live-preview editor, drafts / publishing, SEO fields, views / leads / conversion rate; leads are tagged with the page's campaign and the visitor's UTM tags | HubSpot landing pages | ✅ |
+| Marketing | **UTM link builder** — tagged links with short `/l/{code}` URLs that count clicks; every web form now stores UTM tags | HubSpot tracking URLs | ✅ |
+| AI | **Receptionist warm transfer** — hand callers to the lead's owner (falling back to a team number); Vapi's per-call assistant request gets the caller's context and a transfer tool; forwarded calls are recorded as "Transferred" | AI receptionists | ✅ |
+
+Honest limits: these vendor paths follow each vendor's documented format and are covered by faked HTTP tests, but were not run against live accounts:
+
+- Google and Microsoft sign-in and mailbox / calendar APIs
+- Firebase Cloud Messaging
+- Vapi assistant requests and transfers
+
+Web Push encryption is verified end to end in the test suite: the test decrypts the message the way a browser does and checks the VAPID signature. The mobile shell is a scaffold: `npx cap add ios|android` creates the native projects. SAML-only identity providers need an OpenID Connect bridge (most offer one).
+
+## 10. Roadmap — ideas from here
 
 | Area | Idea | Builds on |
 |---|---|---|
-| Platform | SSO (Google / Microsoft / SAML) | Sanctum, two-step sign-in |
-| Engagement | Two-way Gmail / Outlook mailbox sync (replies land in the inbox automatically) | inbox, email integrations |
-| Engagement | Two-way calendar sync (busy times from Google / Outlook block booking slots) | booking links, calendar feed |
-| Platform | Native mobile shell for the PWA with push notifications | PWA, notification preferences |
-| Platform | OAuth apps for the public API (instead of API keys) | API keys, REST hooks |
-| Marketing | Landing pages and UTM-aware link builder | web forms, attribution |
-| AI | Warm transfer from the receptionist to the owner's phone | AI receptionist, voice vendors |
+| Platform | SAML 2.0 for identity providers without OpenID Connect | SSO |
+| Platform | SCIM user provisioning and deprovisioning | SSO, roles |
+| Engagement | Shared team mailboxes (sales@) routed through assignment rules | mailbox sync, assignment engine |
+| Marketing | A/B tests on landing pages, and forms embedded on any site with UTM capture | landing pages, broadcasts |
+| AI | Receptionist business hours and voicemail-to-task | receptionist, tasks |
+| Platform | Marketplace listing for the OAuth app (Zapier / Make public app) | OAuth apps, REST hooks |
