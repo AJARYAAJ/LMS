@@ -557,6 +557,7 @@ export interface IntegrationProvider {
     values: Record<string, string | null>
     secrets_set: Record<string, boolean>
     inbound_url: string | null
+  redirect_url?: string | null
   } | null
 }
 

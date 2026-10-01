@@ -8,6 +8,7 @@ use App\Security\Totp;
 use App\Services\OrganizationProvisioner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -50,6 +51,9 @@ class AuthController extends Controller
         if (! $user->is_active) {
             throw ValidationException::withMessages(['email' => 'Your account has been deactivated.']);
         }
+        if (SsoController::enforced($user)) {
+            throw ValidationException::withMessages(['email' => 'Your organization signs in with single sign-on. Use “Sign in with SSO”.']);
+        }
 
         // Two-step login: the password alone only earns a short-lived challenge.
         if ($user->hasTwoFactor()) {
@@ -91,6 +95,19 @@ class AuthController extends Controller
                 throw ValidationException::withMessages(['recovery_code' => 'That recovery code isn’t valid or was already used.']);
             }
             $user->forceFill(['two_factor_recovery_codes' => array_values(array_diff($codes, [$match]))])->save();
+        }
+
+        return response()->json($this->tokenResponse($user, $request));
+    }
+
+    /** Finish single sign-on: the one-time code from the SSO redirect becomes an API token. */
+    public function ssoExchange(Request $request): JsonResponse
+    {
+        $data = $request->validate(['code' => ['required', 'string', 'size:48']]);
+        $userId = Cache::pull("sso_login:{$data['code']}");
+        $user = $userId ? User::withoutGlobalScopes()->where('is_active', true)->find($userId) : null;
+        if (! $user) {
+            throw ValidationException::withMessages(['code' => 'This sign-in link expired. Please try again.']);
         }
 
         return response()->json($this->tokenResponse($user, $request));
@@ -157,6 +174,7 @@ class AuthController extends Controller
                 'view_all_leads' => $user->hasRole(User::ADMIN, User::VIEWER),
             ],
             'two_factor_enabled' => $user->hasTwoFactor(),
+            'sso' => SsoController::forEmail($user->email)?->organization_id === $user->organization_id,
         ]);
     }
 }

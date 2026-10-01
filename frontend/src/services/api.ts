@@ -105,6 +105,13 @@ export const api = createApi({
     twoFactorChallenge: b.mutation<{ token: string; user: User }, { challenge: string; code?: string; recovery_code?: string }>({
       query: (body) => ({ url: 'auth/two-factor-challenge', method: 'POST', body }),
     }),
+    ssoStart: b.mutation<{ url: string }, { email: string }>({
+      query: (body) => ({ url: 'auth/sso', method: 'POST', body }),
+      transformResponse: (r: { data: { url: string } }) => r.data,
+    }),
+    ssoExchange: b.mutation<{ token: string; user: User }, { code: string }>({
+      query: (body) => ({ url: 'auth/sso/exchange', method: 'POST', body }),
+    }),
     twoFactorStatus: b.query<{ enabled: boolean; confirmed_at: string | null; recovery_codes_left: number }, void>({
       query: () => 'auth/two-factor',
       transformResponse: (r: { data: never }) => r.data,
@@ -804,7 +811,7 @@ export const api = createApi({
 })
 
 export const {
-  useLoginMutation, useRegisterMutation, useLogoutMutation, useMeQuery, useUpdateProfileMutation, useUpdatePasswordMutation,
+  useLoginMutation, useSsoStartMutation, useSsoExchangeMutation, useRegisterMutation, useLogoutMutation, useMeQuery, useUpdateProfileMutation, useUpdatePasswordMutation,
   useMetaQuery, useSearchQuery, useDashboardQuery, useReportsQuery, useActivityFeedQuery, useNotificationsQuery,
   useReadNotificationMutation, useReadAllNotificationsMutation, useAuditLogsQuery, useSavedViewsQuery,
   useCreateSavedViewMutation, useDeleteSavedViewMutation,

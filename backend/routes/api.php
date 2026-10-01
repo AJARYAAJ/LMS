@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\SavedReportController;
 use App\Http\Controllers\Api\SavedViewController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\Settings;
+use App\Http\Controllers\Api\SsoController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TwoFactorController;
 use Illuminate\Support\Facades\Route;
@@ -45,7 +46,10 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/register', [AuthController::class, 'register']);
         Route::post('auth/login', [AuthController::class, 'login']);
         Route::post('auth/two-factor-challenge', [AuthController::class, 'twoFactorChallenge']);
+        Route::post('auth/sso', [SsoController::class, 'start']);
+        Route::post('auth/sso/exchange', [AuthController::class, 'ssoExchange']);
     });
+    Route::get('sso/callback', [SsoController::class, 'callback'])->middleware('throttle:30,1');
 
     // Hosted web-to-lead forms (public, by slug)
     Route::get('forms/{slug}', [PublicFormController::class, 'show']);

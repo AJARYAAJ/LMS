@@ -15,6 +15,7 @@ class Catalog
         'ai' => 'AI assistant',
         'transcription' => 'Call transcription',
         'chat' => 'Team chat alerts',
+        'sso' => 'Single sign-on',
     ];
 
     public static function providers(): array
@@ -108,6 +109,41 @@ class Catalog
             'teams' => [
                 'category' => 'chat', 'name' => 'Microsoft Teams', 'description' => 'Post alerts to a Teams channel with an incoming webhook / workflow URL.',
                 'fields' => [['key' => 'webhook_url', 'label' => 'Webhook URL', 'required' => true, 'secret' => true]],
+            ],
+            'google_sso' => [
+                'category' => 'sso', 'name' => 'Google Workspace', 'description' => 'People with your domain sign in with their Google account. Create an OAuth client (Web application) in Google Cloud and add the redirect URL below.',
+                'fields' => [
+                    ['key' => 'client_id', 'label' => 'Client ID', 'required' => true],
+                    ['key' => 'client_secret', 'label' => 'Client secret', 'required' => true, 'secret' => true],
+                    ['key' => 'domains', 'label' => 'Email domains', 'required' => true, 'placeholder' => 'yourcompany.com, yourcompany.co.uk'],
+                    ['key' => 'default_role', 'label' => 'Role for new people', 'options' => ['sales_rep', 'viewer', 'manager']],
+                    ['key' => 'enforce', 'label' => 'Require SSO (admins can still use a password)', 'options' => ['no', 'yes']],
+                ],
+                'redirect' => 'sso/callback',
+            ],
+            'microsoft_sso' => [
+                'category' => 'sso', 'name' => 'Microsoft Entra ID', 'description' => 'Sign in with Microsoft 365 / Entra ID. Register an app, add the redirect URL below as a Web redirect, and create a client secret.',
+                'fields' => [
+                    ['key' => 'client_id', 'label' => 'Application (client) ID', 'required' => true],
+                    ['key' => 'client_secret', 'label' => 'Client secret', 'required' => true, 'secret' => true],
+                    ['key' => 'tenant', 'label' => 'Directory (tenant) ID', 'placeholder' => 'organizations'],
+                    ['key' => 'domains', 'label' => 'Email domains', 'required' => true, 'placeholder' => 'yourcompany.com, yourcompany.co.uk'],
+                    ['key' => 'default_role', 'label' => 'Role for new people', 'options' => ['sales_rep', 'viewer', 'manager']],
+                    ['key' => 'enforce', 'label' => 'Require SSO (admins can still use a password)', 'options' => ['no', 'yes']],
+                ],
+                'redirect' => 'sso/callback',
+            ],
+            'oidc_sso' => [
+                'category' => 'sso', 'name' => 'OpenID Connect', 'description' => 'Okta, Auth0, OneLogin, Keycloak, JumpCloud or any OpenID Connect identity provider.',
+                'fields' => [
+                    ['key' => 'issuer', 'label' => 'Issuer URL', 'required' => true, 'placeholder' => 'https://yourcompany.okta.com'],
+                    ['key' => 'client_id', 'label' => 'Client ID', 'required' => true],
+                    ['key' => 'client_secret', 'label' => 'Client secret', 'required' => true, 'secret' => true],
+                    ['key' => 'domains', 'label' => 'Email domains', 'required' => true, 'placeholder' => 'yourcompany.com, yourcompany.co.uk'],
+                    ['key' => 'default_role', 'label' => 'Role for new people', 'options' => ['sales_rep', 'viewer', 'manager']],
+                    ['key' => 'enforce', 'label' => 'Require SSO (admins can still use a password)', 'options' => ['no', 'yes']],
+                ],
+                'redirect' => 'sso/callback',
             ],
         ];
     }

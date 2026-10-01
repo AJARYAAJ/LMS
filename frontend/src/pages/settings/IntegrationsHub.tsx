@@ -96,6 +96,15 @@ export function IntegrationsHub() {
                             {c.last_tested_at && <span className="font-normal text-slate-400">· tested {ago(c.last_tested_at)}</span>}
                           </p>
                           {c.last_error && <p className="rounded-lg bg-rose-50 px-2 py-1 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{c.last_error}</p>}
+                          {c.redirect_url && (
+                            <div>
+                              <p className="text-slate-500">Redirect URL (add it in {p.name}):</p>
+                              <div className="mt-1 flex gap-1">
+                                <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-900/[0.04] px-2 py-1 font-mono text-[11px] dark:bg-white/5">{c.redirect_url}</code>
+                                <button onClick={() => { navigator.clipboard?.writeText(c.redirect_url!); toast('info', 'Redirect URL copied') }} className="rounded-lg p-1 text-slate-400 hover:text-brand-600" aria-label="Copy redirect URL"><Copy className="size-3.5" /></button>
+                              </div>
+                            </div>
+                          )}
                           {c.inbound_url && (
                             <div>
                               <p className="text-slate-500">Webhook URL (paste into {p.name}):</p>

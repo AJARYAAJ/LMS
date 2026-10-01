@@ -6,6 +6,7 @@ use Anthropic\Client;
 use App\Http\Controllers\Controller;
 use App\Integrations\Catalog;
 use App\Models\Integration;
+use App\Security\OAuthClient;
 use App\Services\AuditLogger;
 use App\Services\ChatAlerts;
 use App\Services\OrgMailer;
@@ -98,7 +99,7 @@ class IntegrationController extends Controller
     }
 
     /** Verify credentials with the vendor (best effort; sends nothing to leads). */
-    public function test(Request $request, int $id, OrgMailer $mailer, ChatAlerts $chat): JsonResponse
+    public function test(Request $request, int $id, OrgMailer $mailer, ChatAlerts $chat, OAuthClient $oauth): JsonResponse
     {
         $i = Integration::findOrFail($id);
         $user = $request->user();
@@ -120,6 +121,11 @@ class IntegrationController extends Controller
                     ->get('https://api.retellai.com/get-agent/'.$i->setting('agent_id')), 'Retell agent verified.'),
                 'bland' => $i->setting('api_key') ? 'Bland API key saved. It is verified on the first call.' : throw new \RuntimeException('Missing API key.'),
                 'simulator' => 'The simulator is ready — no credentials needed.',
+                'google_sso', 'microsoft_sso', 'oidc_sso' => (function () use ($i, $oauth) {
+                    $oauth->discover(OAuthClient::issuer(str_replace('_sso', '', $i->provider), $i->config ?? []));
+
+                    return 'Identity provider found. Try “Sign in with SSO” from a private window to finish checking.';
+                })(),
                 'deepgram' => $this->check(Http::withHeaders(['Authorization' => 'Token '.$i->setting('api_key')])->timeout(10)
                     ->get('https://api.deepgram.com/v1/projects'), 'Deepgram key verified.'),
                 'anthropic' => (function () use ($i) {
@@ -161,6 +167,7 @@ class IntegrationController extends Controller
             'last_tested_at' => $i->last_tested_at,
             'values' => collect($def['fields'])->mapWithKeys(fn ($f) => [$f['key'] => ! empty($f['secret']) ? null : $i->setting($f['key'])]),
             'secrets_set' => collect($def['fields'])->filter(fn ($f) => ! empty($f['secret']))->mapWithKeys(fn ($f) => [$f['key'] => filled($i->setting($f['key']))]),
+            'redirect_url' => isset($def['redirect']) ? url("/api/v1/{$def['redirect']}") : null,
             'inbound_url' => isset($def['inbound']) ? url("/api/v1/webhooks/{$def['inbound']}/".Integration::withoutGlobalScopes()->whereKey($i->id)->value('inbound_token')) : null,
         ];
     }
