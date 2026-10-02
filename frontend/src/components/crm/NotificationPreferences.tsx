@@ -49,8 +49,10 @@ export function NotificationPreferences() {
                     <td className="py-2.5 pr-3 text-slate-700 dark:text-slate-200">{k.label}</td>
                     {CHANNELS.map((c) => (
                       <td key={c.key} className="py-2.5 text-center">
-                        <input type="checkbox" aria-label={`${k.label} — ${c.label}`} checked={k[c.key]} onChange={(e) => toggle(k.kind, c.key, e.target.checked)}
-                          className="size-4 cursor-pointer rounded accent-brand-600" />
+                        <input type="checkbox" aria-label={`${k.label} — ${c.label}`} checked={c.key === 'in_app' || k[c.key]} disabled={c.key === 'in_app'}
+                          title={c.key === 'in_app' ? 'Everything always shows in the bell' : undefined}
+                          onChange={(e) => toggle(k.kind, c.key, e.target.checked)}
+                          className="size-4 cursor-pointer rounded accent-brand-600 disabled:cursor-default disabled:opacity-70" />
                       </td>
                     ))}
                   </tr>

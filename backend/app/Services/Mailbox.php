@@ -245,8 +245,18 @@ class Mailbox
         try {
             return $fn();
         } catch (Throwable $e) {
+            $first = $account->last_error === null;
             $account->forceFill(['last_error' => mb_substr($e instanceof RuntimeException ? $e->getMessage() : class_basename($e).': '.$e->getMessage(), 0, 490)])->save();
             report($e);
+            // Tell the person once, when the connection first breaks.
+            if ($first) {
+                $account->user?->notify(new AppNotification(
+                    'Your '.($account->provider === 'google' ? 'Google' : 'Microsoft').' connection needs attention',
+                    "Emails and calendar for {$account->email} aren't syncing. Reconnect it from your profile.",
+                    '/profile',
+                    'system',
+                ));
+            }
 
             return null;
         }

@@ -6,6 +6,7 @@ import { userLoaded } from '@/features/auth/authSlice'
 import { useMeQuery } from '@/services/api'
 import { PageLoader, Spinner } from '@/components/ui'
 import { Sidebar } from './Sidebar'
+import { NotificationPrompt } from './NotificationPrompt'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
 
@@ -44,6 +45,7 @@ export function AppLayout() {
         </main>
       </div>
       <CommandPalette />
+      <NotificationPrompt />
     </div>
   )
 }

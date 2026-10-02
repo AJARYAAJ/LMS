@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToOrganization;
+use App\Notifications\Notifier;
 use App\Security\FieldPermissions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -121,8 +122,13 @@ class Lead extends Model
     public function setConsent(string $channel, string $status, string $source): void
     {
         $consent = $this->consent ?? [];
+        $was = $consent[$channel]['status'] ?? null;
         $consent[$channel] = ['status' => $status, 'at' => now()->toIso8601String(), 'source' => $source];
         $this->forceFill(['consent' => $consent])->saveQuietly();
+        if ($status === 'denied' && $was !== 'denied' && $source !== 'erasure') {
+            Notifier::user($this->owner, "{$this->full_name} opted out of ".($channel === 'calls' ? 'calls' : str_replace('_', ' ', $channel)),
+                'They won’t receive '.($channel === 'email' ? 'emails' : $channel).' from LeadFlow anymore.', "/leads/{$this->id}", 'lead_update');
+        }
     }
 
     public static function unsubscribeSignature(int $id): string

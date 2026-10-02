@@ -19,8 +19,7 @@ class NotificationController extends Controller
                 'read_at' => $n->read_at,
                 'created_at' => $n->created_at,
             ]),
-            // Browser-only alerts (in-app turned off) are delivered but never count as unread.
-            'unread' => $user->unreadNotifications()->where('data', 'not like', '%"in_app":false%')->count(),
+            'unread' => $user->unreadNotifications()->count(),
         ]);
     }
 

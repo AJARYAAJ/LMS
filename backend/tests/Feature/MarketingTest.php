@@ -70,6 +70,8 @@ class MarketingTest extends TestCase
         $this->assertTrue($this->inTenant($admin, fn () => Touchpoint::where('lead_id', $ids[0])->where('channel', 'email_click')->exists()));
         $this->as($admin)->getJson("/api/v1/broadcasts/{$id}/recipients?filter=clicked")->assertJsonCount(1, 'data');
         $this->as($admin)->getJson('/api/v1/broadcasts')->assertJsonPath('data.0.summary.sent', 2);
+        // The sender hears it went out.
+        $this->as($admin)->getJson('/api/v1/notifications')->assertJsonFragment(['title' => '“Spring offer” was sent', 'kind' => 'campaign']);
     }
 
     public function test_ab_test_holds_back_audience_and_sends_the_winner(): void

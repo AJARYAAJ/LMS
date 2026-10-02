@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\BookingPage;
 use App\Models\ConnectedAccount;
 use App\Models\User;
+use App\Notifications\AppNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -90,6 +91,20 @@ class MailboxTest extends TestCase
         $this->assertSame('Can you send pricing?', $emails[0]->description);
         $this->assertSame('fresh', $account->fresh()->access_token);
         $this->as($admin)->getJson('/api/v1/inbox')->assertJsonPath('data.0.lead.id', $lead);
+    }
+
+    public function test_a_broken_connection_alerts_the_person_once(): void
+    {
+        Notification::fake();
+        $admin = $this->organization();
+        $account = $this->connected($admin);
+        Http::fake(['gmail.googleapis.com/*' => Http::response(['error' => 'invalid_grant'], 401)]);
+
+        $this->artisan('mailboxes:sync')->assertSuccessful();
+        $this->artisan('mailboxes:sync')->assertSuccessful();
+        $this->assertNotNull($account->fresh()->last_error);
+        Notification::assertSentToTimes($admin, AppNotification::class, 1);
+        Notification::assertSentTo($admin, AppNotification::class, fn ($n) => $n->kind === 'system' && $n->url === '/profile');
     }
 
     public function test_emails_to_leads_go_out_through_the_connected_mailbox(): void

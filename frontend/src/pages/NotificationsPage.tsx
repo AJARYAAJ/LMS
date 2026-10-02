@@ -14,7 +14,7 @@ export function NotificationsPage() {
   const { data, isLoading } = useNotificationsQuery(200)
   const [readOne] = useReadNotificationMutation()
   const [readAll, readAllState] = useReadAllNotificationsMutation()
-  const items = (data?.data ?? []).filter((n) => n.in_app !== false && (filter === 'all' || !n.read_at))
+  const items = (data?.data ?? []).filter((n) => filter === 'all' || !n.read_at)
 
   return (
     <div className="mx-auto max-w-3xl">

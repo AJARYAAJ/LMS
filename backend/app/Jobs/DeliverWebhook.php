@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\Webhook;
+use App\Notifications\Notifier;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -19,6 +21,15 @@ class DeliverWebhook implements ShouldQueue
     public function backoff(): array
     {
         return [10, 60, 300];
+    }
+
+    /** Out of retries: tell the admins once a day that this webhook is failing. */
+    public function failed(?Throwable $e = null): void
+    {
+        $webhook = Webhook::withoutGlobalScopes()->find($this->webhookId);
+        if ($webhook && Cache::add("webhook_failing:{$webhook->id}", true, now()->addDay())) {
+            Notifier::managers($webhook->organization_id, 'A webhook keeps failing', "Deliveries of “{$this->event}” to {$webhook->url} failed after {$this->tries} tries (last status ".($webhook->last_status ?: 'no response').').', '/settings/integrations', 'system', adminsOnly: true);
+        }
     }
 
     public function handle(): void

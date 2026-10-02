@@ -9,6 +9,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\User;
+use App\Notifications\FeatureNotifications;
 use App\Services\AutomationEngine;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -27,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        FeatureNotifications::register();
+
         // Short, stable type names for polymorphic columns (activities, notes, tasks, audit log).
         Relation::enforceMorphMap(collect([
             Lead::class, Deal::class, Contact::class, Account::class, User::class, Organization::class,

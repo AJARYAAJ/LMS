@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Notifications\AppNotification;
 use App\Security\Totp;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -48,6 +49,7 @@ class TwoFactorController extends Controller
         $codes = $this->codes();
         $user->forceFill(['two_factor_confirmed_at' => now(), 'two_factor_recovery_codes' => $codes])->save();
         $this->audit->log('user.two_factor_enabled', $user);
+        $user->notify(new AppNotification('Two-step login is on', 'Your account now asks for a code from your authenticator app when you sign in.', '/profile', 'security'));
 
         return response()->json(['data' => ['recovery_codes' => $codes]]);
     }
@@ -69,6 +71,7 @@ class TwoFactorController extends Controller
         $this->checkPassword($request);
         $user->forceFill(['two_factor_secret' => null, 'two_factor_recovery_codes' => null, 'two_factor_confirmed_at' => null])->save();
         $this->audit->log('user.two_factor_disabled', $user);
+        $user->notify(new AppNotification('Two-step login was turned off', 'Your account no longer asks for a code at sign-in. If this wasn’t you, change your password now.', '/profile', 'security'));
 
         return response()->json(['message' => 'Two-step login turned off.']);
     }

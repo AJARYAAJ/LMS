@@ -6,6 +6,7 @@ use App\Models\Deal;
 use App\Models\Quote;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Notifications\Notifier;
 use Illuminate\Support\Facades\DB;
 
 /** Builds quotes from line items, sends them and records the customer's answer. */
@@ -92,6 +93,7 @@ class QuoteService
         }
         $quote->update(['viewed_at' => now()]);
         $this->activities->record($quote->deal, 'system', "Quote {$quote->number} opened by the customer");
+        Notifier::user($quote->deal->owner, "Quote {$quote->number} was opened", "{$quote->deal->name} — the customer is looking at it now.", "/deals/{$quote->deal_id}", 'quote');
     }
 
     public function respond(Quote $quote, bool $accepted, ?string $name, ?string $reason, ?string $ip): void

@@ -21,7 +21,8 @@ class PushChannel
             return;
         }
         $url = $notification->url ?? '/notifications';
-        $payload = json_encode(['title' => $notification->title, 'body' => $notification->body, 'url' => $url, 'tag' => $notification->kind]);
+        // The tag is the notification's id, so an open tab and the push show it once, not twice.
+        $payload = json_encode(['title' => $notification->title, 'body' => $notification->body, 'url' => $url, 'tag' => $notification->id ?? $notification->kind]);
 
         PushSubscription::where('user_id', $notifiable->id)->get()->each(function (PushSubscription $s) use ($notification, $payload, $url) {
             try {

@@ -191,19 +191,22 @@ class IntegrationsAndCallingTest extends TestCase
         Notification::assertSentTo($rep, AppNotification::class, fn ($n) => $n->kind === 'test');
     }
 
-    public function test_desktop_only_alerts_do_not_count_as_unread(): void
+    public function test_every_notification_lands_in_the_bell_even_with_other_channels_off(): void
     {
         $admin = $this->organization();
         $rep = $this->member($admin);
-        $this->as($rep)->putJson('/api/v1/auth/notification-preferences', ['notifications' => ['ai_call' => ['in_app' => false, 'browser' => true]]])->assertOk();
+        $this->as($rep)->putJson('/api/v1/auth/notification-preferences', ['notifications' => ['ai_call' => ['in_app' => false, 'email' => false, 'browser' => false]]])->assertOk();
 
         $rep->fresh()->notify(new AppNotification('Call done', kind: 'ai_call'));
         $rep->fresh()->notify(new AppNotification('Lead assigned', kind: 'assignment'));
+        $rep->fresh()->notify(new AppNotification('Something new', kind: 'not_a_listed_kind'));
 
         $this->as($rep)->getJson('/api/v1/notifications')->assertOk()
-            ->assertJsonPath('unread', 1)
-            ->assertJsonCount(2, 'data')
-            ->assertJsonFragment(['title' => 'Call done', 'in_app' => false, 'browser' => true]);
+            ->assertJsonPath('unread', 3)
+            ->assertJsonCount(3, 'data')
+            ->assertJsonFragment(['title' => 'Call done', 'in_app' => true, 'browser' => false])
+            ->assertJsonFragment(['title' => 'Something new', 'browser' => true]); // unknown kinds still reach people outside the site
+        $this->as($rep)->getJson('/api/v1/auth/notification-preferences')->assertJsonPath('data.kinds.0.in_app', true);
     }
 
     public function test_meta_lists_connected_voice_providers(): void

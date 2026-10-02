@@ -7,6 +7,7 @@ use App\Models\Broadcast;
 use App\Models\BroadcastRecipient;
 use App\Models\Lead;
 use App\Models\Touchpoint;
+use App\Notifications\AppNotification;
 use App\Support\Tenant;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -85,6 +86,13 @@ class BroadcastService
         });
         if ($broadcast->status === 'sending' && ! $broadcast->recipients()->whereIn('status', ['queued', 'held'])->exists()) {
             $broadcast->update(['status' => 'sent', 'sent_at' => now()]);
+            $stats = $this->stats($broadcast);
+            $broadcast->creator?->notify(new AppNotification(
+                "“{$broadcast->name}” was sent",
+                "{$stats['sent']} delivered".($stats['skipped'] ? ", {$stats['skipped']} skipped" : '').($broadcast->winner_key ? " · version {$broadcast->winner_key} won the A/B test" : '').'.',
+                "/campaigns?tab=email&broadcast={$broadcast->id}",
+                'campaign',
+            ));
         }
 
         return $sent;

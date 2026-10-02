@@ -12,6 +12,7 @@ use App\Models\PipelineStage;
 use App\Models\Touchpoint;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Notifications\Notifier;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -73,8 +74,9 @@ class LeadService
 
             if ($lead->owner_id) {
                 $lead->forceFill(['assigned_at' => now()])->saveQuietly();
-            } else {
-                $this->autoAssign($lead);
+                Notifier::user($lead->owner, 'New lead assigned', "{$lead->full_name}".($lead->company ? " ({$lead->company})" : '').' has been assigned to you.', "/leads/{$lead->id}", 'assignment', $actor);
+            } elseif (! $this->autoAssign($lead)) {
+                Notifier::managers($lead->organization_id, 'New lead waiting for an owner', "{$lead->full_name}".($lead->company ? " ({$lead->company})" : '').' came in via '.str_replace('_', ' ', $channel).'. Claim it from the queue.', "/leads/{$lead->id}", 'new_lead', $actor);
             }
 
             $this->audit->log('lead.created', $lead, [], $lead->only(['first_name', 'last_name', 'email', 'company', 'owner_id', 'lead_status_id']));

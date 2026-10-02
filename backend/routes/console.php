@@ -2,13 +2,16 @@
 
 use App\Models\Broadcast;
 use App\Models\ConnectedAccount;
+use App\Models\Goal;
 use App\Models\Lead;
 use App\Models\Organization;
 use App\Models\SavedReport;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\AppNotification;
+use App\Notifications\Notifier;
 use App\Push\WebPush;
+use App\Reports\GoalTracker;
 use App\Reports\ReportEngine;
 use App\Reports\ReportMailer;
 use App\Services\BroadcastService;
@@ -237,3 +240,32 @@ Artisan::command('push:vapid', function () {
     $this->line("VAPID_PRIVATE_KEY={$keys['private']}");
     $this->comment('Add these to .env. Changing keys signs everyone out of push, so set them once.');
 })->purpose('Generate a VAPID key pair for Web Push');
+
+/*
+ * Goals: celebrate once per period when one is reached (the person and their
+ * managers for a personal goal, everyone for a team goal).
+ */
+Artisan::command('goals:check', function (GoalTracker $tracker) {
+    $sent = 0;
+    Organization::query()->each(function (Organization $organization) use ($tracker, &$sent) {
+        Tenant::run($organization->id, function () use ($tracker, &$sent) {
+            Goal::with('user')->get()->each(function (Goal $goal) use ($tracker, &$sent) {
+                $p = $tracker->progress($goal);
+                if ($p['status'] !== 'achieved' || $goal->achieved_for === $p['period_label']) {
+                    return;
+                }
+                $goal->forceFill(['achieved_for' => $p['period_label']])->save();
+                $title = ($goal->user ? "{$goal->user->name} reached" : 'The team reached')." the {$p['metric_label']} goal";
+                $body = "{$p['period_label']}: {$p['actual']} of {$p['target']} ({$p['percent']}%). 🎉";
+                $people = $goal->user
+                    ? collect([$goal->user])->merge(User::whereIn('role', [User::ADMIN, User::MANAGER])->where('is_active', true)->get())
+                    : User::where('is_active', true)->where('role', '!=', User::VIEWER)->get();
+                Notifier::many($people, $title, $body, '/reports?tab=goals', 'goal', new User);
+                $sent++;
+            });
+        });
+    });
+    $this->info("Celebrated {$sent} goals.");
+})->purpose('Notify when goals are reached');
+
+Schedule::command('goals:check')->hourlyAt(23)->withoutOverlapping();

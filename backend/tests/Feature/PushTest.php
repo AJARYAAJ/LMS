@@ -54,13 +54,16 @@ class PushTest extends TestCase
         Http::fake(['fcm.googleapis.com/*' => Http::response('', 201)]);
         $admin->notify(new AppNotification('New lead for you', 'Dana from Globex', '/leads/7', 'assignment'));
 
-        Http::assertSent(function (Request $r) use ($browser, $vapid, $endpoint) {
+        Http::assertSent(function (Request $r) use ($browser, $vapid, $endpoint, $admin) {
             if ($r->url() !== $endpoint) {
                 return false;
             }
             $this->assertSame('aes128gcm', $r->header('Content-Encoding')[0]);
             $message = json_decode($this->decrypt($r->body(), $browser), true);
-            $this->assertSame(['title' => 'New lead for you', 'body' => 'Dana from Globex', 'url' => '/leads/7', 'tag' => 'assignment'], $message);
+            // Tagged with the bell notification's id, so an open tab and the push collapse into one alert.
+            $this->assertSame($admin->notifications()->value('id'), $message['tag']);
+            unset($message['tag']);
+            $this->assertSame(['title' => 'New lead for you', 'body' => 'Dana from Globex', 'url' => '/leads/7'], $message);
 
             // VAPID: the JWT is signed with the key the browser subscribed with.
             preg_match('/vapid t=([^,]+), k=(.+)/', $r->header('Authorization')[0], $m);
@@ -87,8 +90,10 @@ class PushTest extends TestCase
         Http::fake(function () use (&$status) {
             return Http::response('', $status);
         });
-        $admin->notify(new AppNotification('Automation ran', '', null, 'automation')); // push is off for this kind by default
+        $this->as($admin)->putJson('/api/v1/auth/notification-preferences', ['notifications' => ['automation' => ['browser' => false]]]);
+        $admin->fresh()->notify(new AppNotification('Automation ran', '', null, 'automation')); // push turned off for this kind
         Http::assertNothingSent();
+        $admin = $admin->fresh();
 
         $status = 410;
         $admin->notify(new AppNotification('Lead assigned', '', null, 'assignment'));

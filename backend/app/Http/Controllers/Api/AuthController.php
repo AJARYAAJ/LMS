@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\AppNotification;
 use App\Security\Totp;
 use App\Services\OrganizationProvisioner;
 use Illuminate\Http\JsonResponse;
@@ -156,10 +157,26 @@ class AuthController extends Controller
 
     private function tokenResponse(User $user, Request $request): array
     {
-        $user->forceFill(['last_login_at' => now()])->saveQuietly();
+        // A sign-in from a browser or device we haven't seen before is worth knowing about.
+        $prefs = $user->preferences ?? [];
+        $device = substr(hash('sha256', (string) $request->userAgent()), 0, 16);
+        $known = $prefs['devices'] ?? null;
+        if (is_array($known) && ! in_array($device, $known, true)) {
+            $user->notify(new AppNotification('New sign-in to your account', 'From '.self::describeAgent((string) $request->userAgent()).' at '.now()->format('M j, H:i').' (IP '.$request->ip().'). Not you? Change your password.', '/profile', 'security'));
+        }
+        $prefs['devices'] = array_values(array_slice(array_unique([$device, ...($known ?? [])]), 0, 10));
+        $user->forceFill(['last_login_at' => now(), 'preferences' => $prefs])->saveQuietly();
         $token = $user->createToken(substr($request->userAgent() ?? 'spa', 0, 100))->plainTextToken;
 
         return ['token' => $token, 'user' => $this->profile($user)];
+    }
+
+    private static function describeAgent(string $ua): string
+    {
+        $browser = collect(['Edg' => 'Edge', 'OPR' => 'Opera', 'Chrome' => 'Chrome', 'Firefox' => 'Firefox', 'Safari' => 'Safari'])->first(fn ($n, $k) => str_contains($ua, $k)) ?? 'a browser';
+        $os = collect(['iPhone' => 'iPhone', 'iPad' => 'iPad', 'Android' => 'Android', 'Windows' => 'Windows', 'Mac OS' => 'Mac', 'Linux' => 'Linux'])->first(fn ($n, $k) => str_contains($ua, $k));
+
+        return $browser.($os ? " on {$os}" : '');
     }
 
     private function profile(User $user): array

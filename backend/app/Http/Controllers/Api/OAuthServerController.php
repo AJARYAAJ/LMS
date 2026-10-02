@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\OAuthApp;
 use App\Models\OAuthRefreshToken;
 use App\Models\User;
+use App\Notifications\AppNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -47,6 +48,7 @@ class OAuthServerController extends Controller
             return response()->json(['data' => ['redirect' => $this->append($redirect, array_filter(['error' => 'access_denied', 'state' => $state]))]]);
         }
 
+        $request->user()->notify(new AppNotification("{$app->name} can now access your account", 'Permissions: '.implode(', ', $scopes).'. An admin can disconnect it under Settings → OAuth apps.', '/profile', 'security'));
         $code = Str::random(64);
         Cache::put('oauth_code:'.hash('sha256', $code), [
             'app_id' => $app->id, 'user_id' => $request->user()->id, 'scopes' => $scopes, 'redirect_uri' => $redirect,

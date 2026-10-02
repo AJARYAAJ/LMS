@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Integration;
 use App\Models\User;
+use App\Notifications\Notifier;
 use App\Security\OAuthClient;
 use App\Services\AuditLogger;
 use App\Support\Tenant;
@@ -109,6 +110,7 @@ class SsoController extends Controller
                 'email' => $person['email'], 'password' => Str::random(40), 'role' => $role,
             ]);
             app(AuditLogger::class)->log('created', $created, [], ['via' => 'single sign-on']);
+            Notifier::managers($i->organization_id, "{$created->name} joined with single sign-on", "{$created->email} · role: ".str_replace('_', ' ', $created->role).'. Change it under Settings → Users.', '/settings/users', 'system', $created, adminsOnly: true);
 
             return $created;
         });

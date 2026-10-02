@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'created_by', 'metric', 'period', 'target'])]
+#[Fillable(['user_id', 'created_by', 'metric', 'period', 'target', 'achieved_for'])]
 class Goal extends Model
 {
     use BelongsToOrganization;

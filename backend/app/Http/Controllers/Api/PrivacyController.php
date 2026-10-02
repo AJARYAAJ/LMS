@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Call;
 use App\Models\Lead;
 use App\Models\User;
+use App\Notifications\Notifier;
 use App\Services\ActivityRecorder;
 use App\Services\AuditLogger;
 use App\Support\Tenant;
@@ -76,6 +77,7 @@ class PrivacyController extends Controller
         $lead = Lead::findOrFail($id);
         $request->validate(['confirm' => ['required', 'string', Rule::in([$lead->full_name, 'ERASE'])]], ['confirm.in' => 'Type the person’s full name (or ERASE) to confirm.']);
         abort_if($lead->erased_at, 422, 'Already erased.');
+        $who = $lead->full_name;
 
         DB::transaction(function () use ($lead, $request) {
             $lead->forceFill([
@@ -90,6 +92,7 @@ class PrivacyController extends Controller
             $this->activities->record($lead, 'system', 'Personal data erased', ['user_id' => $request->user()->id]);
         });
         $this->audit->log('lead.erased', $lead);
+        Notifier::managers($lead->organization_id, 'Personal data erased', "{$request->user()->name} erased {$who}’s personal data (GDPR request).", "/leads/{$lead->id}", 'system', adminsOnly: true);
 
         return response()->json(['message' => 'Personal data erased. Anonymous history is kept for reporting.']);
     }
